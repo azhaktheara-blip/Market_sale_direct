@@ -213,10 +213,57 @@ export const CheckoutPage: React.FC = () => {
                 ))}
               </div>
             ) : (
-              <div className="p-6 text-center bg-stone-50 rounded-2xl border border-dashed border-stone-200 space-y-3">
-                <p className="text-xs text-stone-500">No delivery address saved yet.</p>
-                <Button variant="primary" size="sm" onClick={() => setIsAddressModalOpen(true)}>
-                  Add Delivery Address
+              <div className="p-5 bg-forest-50/40 rounded-2xl border border-forest-200/80 space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xs font-bold text-stone-900">Enter Your Delivery Address</h3>
+                  <span className="text-[10px] text-forest-700 font-semibold bg-forest-100 px-2.5 py-0.5 rounded-full">Fast Checkout</span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                  <Input
+                    label="Recipient Name"
+                    placeholder="Full Name"
+                    value={newRecipientName}
+                    onChange={(e) => setNewRecipientName(e.target.value)}
+                    required
+                  />
+                  <Input
+                    label="Phone Number"
+                    placeholder="012 345 678"
+                    value={newPhone}
+                    onChange={(e) => setNewPhone(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                  <div>
+                    <label className="block text-xs font-bold text-stone-700 mb-1">Province / City</label>
+                    <select
+                      value={newProvince}
+                      onChange={(e) => setNewProvince(e.target.value)}
+                      className="w-full bg-white border border-stone-300 rounded-xl p-2.5 text-xs text-stone-900 focus:outline-none focus:border-forest-600 font-medium"
+                    >
+                      {provinces.map((p) => (
+                        <option key={p} value={p}>{p}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <Input
+                    label="Street / House / Building"
+                    placeholder="Street #, House # or Landmark"
+                    value={newStreet}
+                    onChange={(e) => setNewStreet(e.target.value)}
+                    required
+                  />
+                </div>
+                <Button
+                  type="button"
+                  variant="primary"
+                  size="sm"
+                  isLoading={addAddressMutation.isPending}
+                  onClick={handleCreateAddress}
+                  className="w-full font-bold"
+                >
+                  Save Delivery Address
                 </Button>
               </div>
             )}

@@ -250,6 +250,16 @@ export const BakongPaymentModal: React.FC<BakongPaymentModalProps> = ({
 
           {/* Deep link / ABA PayWay Checkout */}
           <div className="space-y-2">
+            <a
+              href="https://link-sandbox.payway.com.kh/pS81031X"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-teal-700 text-white text-xs font-bold hover:bg-teal-800 transition-colors shadow-sm"
+            >
+              <span>Pay via ABA PayWay Direct Link (Sandbox)</span>
+              <ExternalLink className="w-3.5 h-3.5" />
+            </a>
+
             {paymentData?.deep_link && (
               <a
                 href={paymentData.deep_link}
