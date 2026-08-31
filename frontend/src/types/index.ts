@@ -306,7 +306,9 @@ export interface Order {
   status: 'PENDING' | 'CONFIRMED' | 'PREPARING' | 'READY' | 'OUT_FOR_DELIVERY' | 'DELIVERED' | 'CANCELLED' | 'REJECTED';
   subtotal: string;
   delivery_fee: string;
+  commission_rate_percentage?: string;
   marketplace_commission: string;
+  farmer_payout?: string;
   total: string;
   delivery_address_snapshot: {
     recipient_name: string;

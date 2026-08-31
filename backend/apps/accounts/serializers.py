@@ -34,9 +34,15 @@ class UserSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'created_at', 'updated_at']
 
 
+from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError as DjangoValidationError
+
 class RegisterSerializer(serializers.ModelSerializer):
-    password = serializers.CharField(write_only=True, min_length=6)
-    role = serializers.ChoiceField(choices=User.Role.choices, default=User.Role.CUSTOMER)
+    password = serializers.CharField(write_only=True, min_length=8)
+    role = serializers.ChoiceField(
+        choices=[(User.Role.CUSTOMER, 'Customer'), (User.Role.FARMER, 'Farmer')],
+        default=User.Role.CUSTOMER
+    )
     
     # Extra fields for farmer registration
     farm_name = serializers.CharField(required=False, allow_blank=True)
@@ -57,11 +63,21 @@ class RegisterSerializer(serializers.ModelSerializer):
             'business_name', 'business_type'
         ]
 
+    def validate_password(self, value):
+        try:
+            validate_password(value)
+        except DjangoValidationError as e:
+            raise serializers.ValidationError(list(e.messages))
+        return value
+
     def validate(self, attrs):
         role = attrs.get('role', User.Role.CUSTOMER)
+        if role not in [User.Role.CUSTOMER, User.Role.FARMER]:
+            raise serializers.ValidationError({"role": "Invalid registration role."})
+
         if role == User.Role.FARMER:
-            if not attrs.get('farm_name'):
-                raise serializers.ValidationError({"farm_name": "Farm name is required when registering as a farmer."})
+            if not attrs.get('farm_name') or len(attrs.get('farm_name', '').strip()) < 3:
+                raise serializers.ValidationError({"farm_name": "Farm name is required (min 3 characters)."})
             if not attrs.get('province'):
                 raise serializers.ValidationError({"province": "Province/City is required when registering as a farmer."})
         return attrs

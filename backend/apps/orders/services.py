@@ -15,7 +15,12 @@ from django.conf import settings
 class OrderService:
     @staticmethod
     @transaction.atomic
-    def checkout(user, address_id, payment_method=Order.PaymentMethod.COD, customer_notes=''):
+    def checkout(user, address_id, payment_method=Order.PaymentMethod.COD, customer_notes='', idempotency_key=None):
+        if idempotency_key:
+            existing_order = Order.objects.filter(idempotency_key=idempotency_key, customer=user).first()
+            if existing_order:
+                return [existing_order]
+
         cart = Cart.objects.filter(user=user).first()
         if not cart or not cart.items.exists():
             raise ValidationError("Your cart is empty.")
@@ -42,14 +47,16 @@ class OrderService:
             farmer_groups[farmer.id]['items'].append(item)
 
         created_orders = []
-        commission_rate = Decimal(str(getattr(settings, 'MARKETPLACE_COMMISSION_PERCENTAGE', 5.0))) / Decimal('100.0')
+        commission_percentage = Decimal(str(getattr(settings, 'MARKETPLACE_COMMISSION_PERCENTAGE', 5.0)))
+        commission_rate = commission_percentage / Decimal('100.0')
         delivery_fee_per_farm = Decimal('2.00')
 
         for farm_id, group in farmer_groups.items():
             farmer = group['farmer']
             items = group['items']
 
-            # Create Order
+            # Create Order with Idempotency Key
+            order_idempotency = f"{idempotency_key}_{farm_id}" if idempotency_key else None
             order = Order.objects.create(
                 customer=user,
                 farmer=farmer,
@@ -57,7 +64,8 @@ class OrderService:
                 delivery_address_snapshot=address_snapshot,
                 customer_notes=customer_notes,
                 payment_method=payment_method,
-                payment_status=Order.PaymentStatus.PENDING
+                payment_status=Order.PaymentStatus.PENDING,
+                idempotency_key=order_idempotency
             )
 
             order_subtotal = Decimal('0.00')
@@ -100,9 +108,14 @@ class OrderService:
                     subtotal=item_subtotal
                 )
 
+            commission_amt = round(order_subtotal * commission_rate, 2)
+            net_payout = round(order_subtotal - commission_amt, 2)
+
             order.subtotal = order_subtotal
             order.delivery_fee = delivery_fee_per_farm
-            order.marketplace_commission = round(order_subtotal * commission_rate, 2)
+            order.commission_rate_percentage = commission_percentage
+            order.marketplace_commission = commission_amt
+            order.farmer_payout = net_payout
             order.total = round(order_subtotal + delivery_fee_per_farm, 2)
             order.save()
 

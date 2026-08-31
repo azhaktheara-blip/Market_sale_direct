@@ -56,8 +56,11 @@ class Order(TimeStampedModel):
     )
     subtotal = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)
     delivery_fee = models.DecimalField(max_digits=8, decimal_places=2, default=2.00)
-    marketplace_commission = models.DecimalField(max_digits=8, decimal_places=2, default=0.00)
+    commission_rate_percentage = models.DecimalField(max_digits=5, decimal_places=2, default=5.00, help_text="Marketplace commission rate applied (e.g. 5.00%).")
+    marketplace_commission = models.DecimalField(max_digits=8, decimal_places=2, default=0.00, help_text="Total commission retained by platform.")
+    farmer_payout = models.DecimalField(max_digits=12, decimal_places=2, default=0.00, help_text="Net payout payable to farmer (subtotal - commission).")
     total = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)
+    idempotency_key = models.CharField(max_length=64, blank=True, null=True, unique=True, db_index=True)
     
     # Immutable address snapshot taken at order placement
     delivery_address_snapshot = models.JSONField(default=dict)

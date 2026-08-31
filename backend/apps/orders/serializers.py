@@ -39,8 +39,9 @@ class OrderSerializer(serializers.ModelSerializer):
         model = Order
         fields = [
             'id', 'order_number', 'customer', 'customer_email', 'customer_name',
-            'farmer', 'status', 'subtotal', 'delivery_fee', 'marketplace_commission',
-            'total', 'delivery_address_snapshot', 'customer_notes', 'cancellation_reason',
+            'farmer', 'status', 'subtotal', 'delivery_fee', 'commission_rate_percentage',
+            'marketplace_commission', 'farmer_payout', 'total',
+            'delivery_address_snapshot', 'customer_notes', 'cancellation_reason',
             'payment_status', 'payment_method', 'delivery', 'items',
             'created_at', 'updated_at'
         ]
@@ -50,6 +51,7 @@ class CheckoutSerializer(serializers.Serializer):
     address_id = serializers.UUIDField()
     payment_method = serializers.ChoiceField(choices=Order.PaymentMethod.choices, default=Order.PaymentMethod.COD)
     customer_notes = serializers.CharField(required=False, allow_blank=True)
+    idempotency_key = serializers.CharField(required=False, allow_blank=True, max_length=64)
 
 
 class UpdateOrderStatusSerializer(serializers.Serializer):

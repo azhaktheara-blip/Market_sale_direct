@@ -214,6 +214,33 @@ export const FarmerOrdersPage: React.FC = () => {
                 </div>
               </div>
 
+              {/* Financial Accounting Breakdown for Farmer */}
+              <div className="bg-forest-50/60 border border-forest-100 rounded-2xl p-3.5 flex flex-wrap items-center justify-between gap-3 text-xs">
+                <div className="flex items-center gap-6">
+                  <div>
+                    <span className="text-[10px] uppercase font-bold text-stone-400 block">Produce Subtotal</span>
+                    <strong className="text-stone-900 font-mono text-sm">${parseFloat(order.subtotal).toFixed(2)}</strong>
+                  </div>
+                  <div>
+                    <span className="text-[10px] uppercase font-bold text-amber-700 block">
+                      Platform Commission ({order.commission_rate_percentage || '5'}%)
+                    </span>
+                    <strong className="text-amber-800 font-mono text-sm">
+                      -${parseFloat(order.marketplace_commission).toFixed(2)}
+                    </strong>
+                  </div>
+                  <div>
+                    <span className="text-[10px] uppercase font-bold text-forest-700 block">Net Payout to Farm</span>
+                    <strong className="text-forest-900 font-mono text-base font-extrabold">
+                      ${(order.farmer_payout ? parseFloat(order.farmer_payout) : (parseFloat(order.subtotal) - parseFloat(order.marketplace_commission))).toFixed(2)}
+                    </strong>
+                  </div>
+                </div>
+                <div className="text-[11px] text-stone-500 italic">
+                  ✓ 95% direct farm earnings guarantee
+                </div>
+              </div>
+
               {/* Action Buttons */}
               <div className="pt-2 flex flex-wrap items-center justify-between gap-2 border-t border-stone-100">
                 {/* 1-Click Quick Progression Buttons */}

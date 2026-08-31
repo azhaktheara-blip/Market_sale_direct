@@ -26,12 +26,14 @@ class CheckoutView(APIView):
         address_id = serializer.validated_data['address_id']
         payment_method = serializer.validated_data.get('payment_method', Order.PaymentMethod.COD)
         customer_notes = serializer.validated_data.get('customer_notes', '')
+        idempotency_key = request.headers.get('Idempotency-Key') or serializer.validated_data.get('idempotency_key')
 
         orders = OrderService.checkout(
             user=request.user,
             address_id=address_id,
             payment_method=payment_method,
-            customer_notes=customer_notes
+            customer_notes=customer_notes,
+            idempotency_key=idempotency_key
         )
 
         order_serializer = OrderSerializer(orders, many=True, context={'request': request})
