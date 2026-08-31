@@ -334,15 +334,23 @@ export const CheckoutPage: React.FC = () => {
             </div>
 
             <Button
-              onClick={() => checkoutMutation.mutate()}
+              onClick={() => {
+                if (!selectedAddressId) {
+                  setIsAddressModalOpen(true);
+                } else {
+                  checkoutMutation.mutate();
+                }
+              }}
               isLoading={checkoutMutation.isPending}
-              disabled={!selectedAddressId || checkoutMutation.isPending}
+              disabled={checkoutMutation.isPending}
               variant="primary"
               size="lg"
               className="w-full rounded-2xl font-bold"
               rightIcon={<ArrowRight className="w-4 h-4" />}
             >
-              Place Order (${cart.total})
+              {!selectedAddressId
+                ? 'Add Delivery Address & Continue'
+                : `Place Order & Pay with ${paymentMethod === 'BAKONG_QR' ? 'KHQR' : paymentMethod === 'CREDIT_CARD' ? 'Card' : 'COD'} ($${cart.total})`}
             </Button>
           </div>
         </div>
