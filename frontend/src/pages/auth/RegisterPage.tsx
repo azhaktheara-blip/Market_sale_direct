@@ -91,14 +91,23 @@ export const RegisterPage: React.FC = () => {
         navigate('/products', { replace: true });
       }
     } catch (err: any) {
-      if (err.response?.data?.errors) {
-        const firstKey = Object.keys(err.response.data.errors)[0];
-        const val = err.response.data.errors[firstKey];
-        setServerError(`${firstKey}: ${Array.isArray(val) ? val.join(', ') : val}`);
-      } else if (err.response?.data?.message) {
-        setServerError(err.response.data.message);
+      if (err.response?.data) {
+        const data = err.response.data;
+        if (data.errors && typeof data.errors === 'object') {
+          const messages = Object.entries(data.errors).map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(', ') : v}`);
+          setServerError(messages.join(' | '));
+        } else if (data.message) {
+          setServerError(data.message);
+        } else if (data.detail) {
+          setServerError(data.detail);
+        } else if (typeof data === 'object') {
+          const messages = Object.entries(data).map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(', ') : v}`);
+          setServerError(messages.join(' | '));
+        } else {
+          setServerError(String(data));
+        }
       } else {
-        setServerError('Registration failed. Please check your information.');
+        setServerError('Network error. Please check your connection or CORS settings.');
       }
     }
   };

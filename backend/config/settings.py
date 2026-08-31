@@ -164,7 +164,7 @@ SIMPLE_JWT = {
 }
 
 # CORS Configuration
-CORS_ALLOW_ALL_ORIGINS = False
+CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOWED_ORIGINS = [
     'http://localhost:5173',
@@ -175,10 +175,13 @@ CORS_ALLOWED_ORIGINS = [
     'http://127.0.0.1:3000',
     'http://localhost:80',
     'http://localhost',
+    'https://market-sale-direct.vercel.app',
 ]
 CORS_ALLOWED_ORIGIN_REGEXES = [
     r"^http://localhost:\d+$",
     r"^http://127\.0\.0\.1:\d+$",
+    r"^https://.*\.vercel\.app$",
+    r"^https://.*\.onrender\.com$",
 ]
 from corsheaders.defaults import default_headers
 CORS_ALLOW_HEADERS = list(default_headers) + [
