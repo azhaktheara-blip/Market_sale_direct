@@ -2,6 +2,7 @@ from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
+from django.http import JsonResponse
 from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView, SpectacularSwaggerView
 from apps.core.analytics_views import (
     FarmerDashboardAnalyticsView,
@@ -9,7 +10,24 @@ from apps.core.analytics_views import (
     AdminDashboardAnalyticsView
 )
 
+def api_root(request):
+    return JsonResponse({
+        'status': 'healthy',
+        'service': 'FarmerDirect Marketplace API',
+        'version': '1.0.0',
+        'documentation': '/swagger/',
+        'admin': '/admin/',
+        'api_v1_endpoints': {
+            'products': '/api/v1/products/',
+            'categories': '/api/v1/categories/',
+            'farmers': '/api/v1/farmers/',
+            'agri_weather': '/api/v1/ai/agri-weather/',
+            'market_prices': '/api/v1/ai/market-prices/',
+        }
+    })
+
 urlpatterns = [
+    path('', api_root, name='api-root'),
     path('admin/', admin.site.urls),
 
     # OpenAPI Schema & Interactive Docs
