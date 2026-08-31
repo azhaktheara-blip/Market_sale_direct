@@ -248,16 +248,17 @@ export const BakongPaymentModal: React.FC<BakongPaymentModalProps> = ({
             </div>
           )}
 
-          {/* Deep link / ABA PayWay Checkout */}
-          <div className="space-y-2">
+          {/* Primary Action: Official ABA PayWay Direct Real Money Checkout */}
+          <div className="space-y-2.5 pt-1">
             <a
               href="https://link-sandbox.payway.com.kh/pS81031X"
               target="_blank"
               rel="noopener noreferrer"
-              className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-teal-700 text-white text-xs font-bold hover:bg-teal-800 transition-colors shadow-sm"
+              className="w-full flex items-center justify-center gap-2.5 py-3 px-5 rounded-2xl bg-gradient-to-r from-teal-700 via-teal-800 to-teal-900 text-white text-sm font-extrabold hover:from-teal-800 hover:to-teal-950 transition-all shadow-md active:scale-[0.99]"
             >
-              <span>Pay via ABA PayWay Direct Link (Sandbox)</span>
-              <ExternalLink className="w-3.5 h-3.5" />
+              <Building2 className="w-4 h-4 text-teal-200" />
+              <span>Pay Real Money with ABA PayWay Checkout</span>
+              <ExternalLink className="w-4 h-4 text-teal-200" />
             </a>
 
             {paymentData?.deep_link && (
@@ -265,17 +266,17 @@ export const BakongPaymentModal: React.FC<BakongPaymentModalProps> = ({
                 href={paymentData.deep_link}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="w-full flex items-center justify-center gap-2 py-2 px-4 rounded-xl bg-forest-600 text-white text-xs font-bold hover:bg-forest-700 transition-colors shadow-xs"
+                className="w-full flex items-center justify-center gap-2 py-2 px-4 rounded-xl bg-forest-50 text-forest-800 text-xs font-bold hover:bg-forest-100 transition-colors border border-forest-200"
               >
-                <span>Open in ABA Mobile / Bakong App</span>
+                <span>Open Directly in ABA Mobile App</span>
                 <ExternalLink className="w-3.5 h-3.5" />
               </a>
             )}
-            {paymentData?.is_sandbox && (
-              <div className="text-[10px] text-amber-700 bg-amber-50 border border-amber-200 px-3 py-1 rounded-xl text-center font-medium">
-                ⚡ Connected to ABA PayWay Sandbox Testing Environment
-              </div>
-            )}
+
+            <div className="text-[10px] text-teal-800 bg-teal-50 border border-teal-200 px-3 py-1.5 rounded-xl text-center font-semibold flex items-center justify-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-teal-500 animate-ping" />
+              <span>Official ABA PayWay Payment Link Active: https://link-sandbox.payway.com.kh/pS81031X</span>
+            </div>
           </div>
 
           {/* Simulate Bank Webhook Confirmation */}

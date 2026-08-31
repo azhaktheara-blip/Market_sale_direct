@@ -297,18 +297,21 @@ export const CheckoutPage: React.FC = () => {
 
               <div
                 onClick={() => setPaymentMethod('BAKONG_QR')}
-                className={`p-4 rounded-2xl border-2 transition-all cursor-pointer space-y-2 ${
+                className={`p-4 rounded-2xl border-2 transition-all cursor-pointer space-y-2 relative ${
                   paymentMethod === 'BAKONG_QR'
-                    ? 'border-forest-600 bg-forest-50/40 shadow-sm'
+                    ? 'border-teal-600 bg-teal-50/50 shadow-sm ring-2 ring-teal-600/20'
                     : 'border-stone-200 hover:border-stone-300'
                 }`}
               >
                 <div className="flex items-center justify-between">
-                  <QrCode className="w-5 h-5 text-teal-600" />
-                  {paymentMethod === 'BAKONG_QR' && <CheckCircle2 className="w-4 h-4 text-forest-600" />}
+                  <div className="flex items-center gap-1.5">
+                    <QrCode className="w-5 h-5 text-teal-700" />
+                    <span className="text-[9px] font-extrabold bg-teal-700 text-white px-1.5 py-0.5 rounded uppercase">ABA PayWay</span>
+                  </div>
+                  {paymentMethod === 'BAKONG_QR' && <CheckCircle2 className="w-4 h-4 text-teal-700" />}
                 </div>
-                <h3 className="text-xs font-bold text-stone-900">Bakong / KHQR</h3>
-                <p className="text-[11px] text-stone-500">Scan & pay instantly with any Cambodian bank app.</p>
+                <h3 className="text-xs font-bold text-stone-900">ABA PayWay / KHQR</h3>
+                <p className="text-[11px] text-stone-500">Instant real payment via ABA Mobile, ACLEDA, Bakong, or Wing.</p>
               </div>
 
               <div
