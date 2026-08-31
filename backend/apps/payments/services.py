@@ -150,6 +150,44 @@ class BakongKHQRGateway(BasePaymentGateway):
         return True
 
 
+class ABAPayWayGateway(BakongKHQRGateway):
+    """
+    Official ABA Bank PayWay Payment Gateway Integration.
+    Supports Sandbox (https://checkout-sandbox.payway.com.kh/)
+    and Production (https://checkout.payway.com.kh/).
+    """
+    @staticmethod
+    def get_hash(raw_string: str, key: str) -> str:
+        """Computes ABA PayWay HMAC-SHA512 signature in Base64."""
+        signature = hmac.new(key.encode('utf-8'), raw_string.encode('utf-8'), hashlib.sha512).digest()
+        return base64.b64encode(signature).decode('utf-8')
+
+    def create_payment(self, order: Order, **kwargs) -> dict:
+        base_url = getattr(settings, 'ABA_PAYWAY_BASE_URL', 'https://checkout-sandbox.payway.com.kh')
+        merchant_id = getattr(settings, 'ABA_PAYWAY_MERCHANT_ID', 'ec438696')
+        api_key = getattr(settings, 'ABA_PAYWAY_API_KEY', '')
+        currency = kwargs.get('currency', 'USD')
+
+        req_time = timezone.now().strftime('%Y%m%d%H%M%S')
+        tran_id = f"ABA-{order.order_number}"
+        amount = str(order.total) if currency == 'USD' else str(int(order.total * Decimal('4100')))
+
+        # Delegate to Bakong KHQR for instant embedded QR rendering
+        khqr_data = super().create_payment(order, currency=currency)
+
+        hash_raw = f"{req_time}{merchant_id}{tran_id}{amount}"
+        signature_hash = self.get_hash(hash_raw, api_key) if api_key else ""
+
+        return {
+            **khqr_data,
+            'aba_payway_url': f"{base_url}/api/payment-gateway/v1/payments/purchase",
+            'aba_merchant_id': merchant_id,
+            'req_time': req_time,
+            'signature_hash': signature_hash,
+            'is_sandbox': 'sandbox' in base_url,
+        }
+
+
 class StripeGateway(BasePaymentGateway):
     """
     Stripe payment intent provider abstraction.
@@ -194,11 +232,11 @@ class PaymentService:
     def get_gateway(method: str) -> BasePaymentGateway:
         gateways = {
             Order.PaymentMethod.COD: CashOnDeliveryGateway(),
-            Order.PaymentMethod.BAKONG_QR: BakongKHQRGateway(),
+            Order.PaymentMethod.BAKONG_QR: ABAPayWayGateway(),
             Order.PaymentMethod.CREDIT_CARD: StripeGateway(),
             Order.PaymentMethod.BANK_TRANSFER: CashOnDeliveryGateway(),
         }
-        return gateways.get(method, CashOnDeliveryGateway())
+        return gateways.get(method, ABAPayWayGateway())
 
     @staticmethod
     def initiate_payment(order: Order, method: str) -> dict:

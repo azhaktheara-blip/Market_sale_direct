@@ -209,6 +209,12 @@ SPECTACULAR_SETTINGS = {
 # Celery & Redis Configuration
 CELERY_BROKER_URL = os.getenv('CELERY_BROKER_URL', 'redis://localhost:6379/1')
 CELERY_RESULT_BACKEND = os.getenv('REDIS_URL', 'redis://localhost:6379/0')
+
+# ABA PayWay & Bakong KHQR Gateway Configuration
+ABA_PAYWAY_BASE_URL = os.getenv('ABA_PAYWAY_BASE_URL', 'https://checkout-sandbox.payway.com.kh')
+ABA_PAYWAY_MERCHANT_ID = os.getenv('ABA_PAYWAY_MERCHANT_ID', os.getenv('BAKONG_MERCHANT_ID', 'ec438696'))
+ABA_PAYWAY_API_KEY = os.getenv('ABA_PAYWAY_API_KEY', '')
+MARKETPLACE_COMMISSION_PERCENTAGE = float(os.getenv('MARKETPLACE_COMMISSION_PERCENTAGE', '5.0'))
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
