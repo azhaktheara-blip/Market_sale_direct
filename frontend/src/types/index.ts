@@ -261,6 +261,9 @@ export interface BakongPaymentInitiateResponse {
   signature_hash?: string;
   deep_link: string;
   instructions: string;
+  aba_payway_url?: string;
+  aba_merchant_id?: string;
+  is_sandbox?: boolean;
 }
 
 export interface Cart {

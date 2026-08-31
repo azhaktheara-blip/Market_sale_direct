@@ -248,18 +248,25 @@ export const BakongPaymentModal: React.FC<BakongPaymentModalProps> = ({
             </div>
           )}
 
-          {/* Deep link */}
-          {paymentData?.deep_link && (
-            <a
-              href={paymentData.deep_link}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="w-full flex items-center justify-center gap-2 py-2 px-4 rounded-xl bg-forest-50 text-forest-800 text-xs font-bold hover:bg-forest-100 transition-colors border border-forest-200"
-            >
-              <span>Open in Bakong / Mobile Banking App</span>
-              <ExternalLink className="w-3.5 h-3.5" />
-            </a>
-          )}
+          {/* Deep link / ABA PayWay Checkout */}
+          <div className="space-y-2">
+            {paymentData?.deep_link && (
+              <a
+                href={paymentData.deep_link}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full flex items-center justify-center gap-2 py-2 px-4 rounded-xl bg-forest-600 text-white text-xs font-bold hover:bg-forest-700 transition-colors shadow-xs"
+              >
+                <span>Open in ABA Mobile / Bakong App</span>
+                <ExternalLink className="w-3.5 h-3.5" />
+              </a>
+            )}
+            {paymentData?.is_sandbox && (
+              <div className="text-[10px] text-amber-700 bg-amber-50 border border-amber-200 px-3 py-1 rounded-xl text-center font-medium">
+                ⚡ Connected to ABA PayWay Sandbox Testing Environment
+              </div>
+            )}
+          </div>
 
           {/* Simulate Bank Webhook Confirmation */}
           <div className="pt-1">
