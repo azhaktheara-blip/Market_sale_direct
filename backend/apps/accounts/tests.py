@@ -16,7 +16,7 @@ class AccountsAuthTests(TestCase):
         payload = {
             'email': 'newbuyer@example.com',
             'username': 'newbuyer',
-            'password': 'password123',
+            'password': 'SecureKhmer@2026!',
             'role': 'CUSTOMER',
             'phone_number': '+85512000111',
             'business_name': 'Green Leaf Bistro',
@@ -32,7 +32,7 @@ class AccountsAuthTests(TestCase):
         payload = {
             'email': 'newfarmer@example.com',
             'username': 'newfarmer',
-            'password': 'password123',
+            'password': 'SecureKhmer@2026!',
             'role': 'FARMER',
             'farm_name': 'Sunrise Valley Orchard',
             'province': 'Battambang',
@@ -45,10 +45,10 @@ class AccountsAuthTests(TestCase):
         self.assertTrue(FarmerProfile.objects.filter(user__email='newfarmer@example.com').exists())
 
     def test_jwt_login_returns_custom_claims(self):
-        user = User.objects.create_user(email='testlogin@example.com', password='password123', role='CUSTOMER')
+        user = User.objects.create_user(email='testlogin@example.com', password='SecureKhmer@2026!', role='CUSTOMER')
         response = self.client.post('/api/v1/auth/login/', {
             'email': 'testlogin@example.com',
-            'password': 'password123'
+            'password': 'SecureKhmer@2026!'
         })
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIn('access', response.data)

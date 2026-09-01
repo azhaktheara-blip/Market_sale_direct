@@ -63,7 +63,7 @@ class ProductsCatalogTests(TestCase):
             'minimum_order_qty': '1.00',
             'harvest_date': str(timezone.now().date()),
             'is_organic': True,
-            'status': 'ACTIVE',
+            'status': 'DRAFT',
             'initial_stock': '100.00',
             'short_description': 'Sweet cherry tomatoes.',
             'description': 'Handpicked red cherry tomatoes.'

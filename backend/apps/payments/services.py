@@ -1,7 +1,10 @@
+import hmac
+import base64
 import hashlib
 import uuid
 from abc import ABC, abstractmethod
 from decimal import Decimal
+from django.conf import settings
 from django.utils import timezone
 from .models import Payment
 from apps.orders.models import Order
@@ -208,6 +211,36 @@ class ABAPayWayGateway(BakongKHQRGateway):
             'direct_pay_link': direct_link,
             'is_sandbox': 'sandbox' in base_url,
         }
+
+    def verify_payment(self, payment: Payment, **kwargs) -> bool:
+        from .payway_client import PayWayClient
+        client = PayWayClient()
+        result = client.check_transaction(payment.transaction_id)
+
+        # ABA PayWay status 0 means APPROVED / PAID
+        if result.get('status') == 0:
+            payment.status = Payment.Status.COMPLETED
+            payment.paid_at = timezone.now()
+            payment.payment_gateway_response = {
+                **(payment.payment_gateway_response or {}),
+                'verified_by_aba': True,
+                'aba_response': result
+            }
+            payment.save(update_fields=['status', 'paid_at', 'payment_gateway_response'])
+            payment.order.payment_status = Order.PaymentStatus.PAID
+            payment.order.save(update_fields=['payment_status'])
+            return True
+
+        # In DEBUG mode, allow simulation fallback
+        if getattr(settings, 'DEBUG', False) and result.get('status') == -1:
+            payment.status = Payment.Status.COMPLETED
+            payment.paid_at = timezone.now()
+            payment.save(update_fields=['status', 'paid_at'])
+            payment.order.payment_status = Order.PaymentStatus.PAID
+            payment.order.save(update_fields=['payment_status'])
+            return True
+
+        return False
 
 
 class StripeGateway(BasePaymentGateway):
