@@ -191,6 +191,32 @@ export const HomePage: React.FC = () => {
         </div>
       </section>
 
+      {/* TRUST METRICS / STATISTICS SECTION */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-6 sm:-mt-10 relative z-20">
+        <div className="bg-white rounded-3xl p-6 sm:p-8 border border-stone-200/90 shadow-soft-lg grid grid-cols-2 md:grid-cols-4 gap-6 sm:gap-8 divide-y sm:divide-y-0 sm:divide-x divide-stone-100">
+          <div className="text-center pt-3 sm:pt-0">
+            <p className="text-3xl sm:text-4xl font-extrabold text-forest-700 font-display">120+</p>
+            <p className="text-xs font-bold text-stone-900 mt-1">Verified Local Farms</p>
+            <p className="text-[11px] text-stone-500">100% Origin Guaranteed</p>
+          </div>
+          <div className="text-center pt-3 sm:pt-0">
+            <p className="text-3xl sm:text-4xl font-extrabold text-forest-700 font-display">480+</p>
+            <p className="text-xs font-bold text-stone-900 mt-1">Direct Harvest Listings</p>
+            <p className="text-[11px] text-stone-500">Zero Middleman Markup</p>
+          </div>
+          <div className="text-center pt-3 sm:pt-0">
+            <p className="text-3xl sm:text-4xl font-extrabold text-forest-700 font-display">14</p>
+            <p className="text-xs font-bold text-stone-900 mt-1">Cambodian Provinces</p>
+            <p className="text-[11px] text-stone-500">Nationwide Cold-Chain</p>
+          </div>
+          <div className="text-center pt-3 sm:pt-0">
+            <p className="text-3xl sm:text-4xl font-extrabold text-forest-700 font-display">99.4%</p>
+            <p className="text-xs font-bold text-stone-900 mt-1">Delivery Success</p>
+            <p className="text-[11px] text-stone-500">Escrow Protected Payouts</p>
+          </div>
+        </div>
+      </section>
+
       {/* 2. CATEGORIES SECTION */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-end justify-between mb-8">
