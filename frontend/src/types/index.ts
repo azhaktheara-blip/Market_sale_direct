@@ -263,6 +263,7 @@ export interface BakongPaymentInitiateResponse {
   instructions: string;
   aba_payway_url?: string;
   aba_merchant_id?: string;
+  direct_pay_link?: string;
   is_sandbox?: boolean;
 }
 

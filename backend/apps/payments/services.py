@@ -164,13 +164,13 @@ class ABAPayWayGateway(BakongKHQRGateway):
 
     def create_payment(self, order: Order, **kwargs) -> dict:
         base_url = getattr(settings, 'ABA_PAYWAY_BASE_URL', 'https://checkout-sandbox.payway.com.kh')
-        merchant_id = getattr(settings, 'ABA_PAYWAY_MERCHANT_ID', 'ec438696')
-        api_key = getattr(settings, 'ABA_PAYWAY_API_KEY', '')
+        merchant_id = getattr(settings, 'ABA_PAYWAY_MERCHANT_ID', 'ec478104')
+        api_key = getattr(settings, 'ABA_PAYWAY_API_KEY', 'ce16f4443ee14a83052c02f3ac36d96f58f0fcae')
         currency = kwargs.get('currency', 'USD')
 
         req_time = timezone.now().strftime('%Y%m%d%H%M%S')
         tran_id = f"ABA-{order.order_number}"
-        amount = str(order.total) if currency == 'USD' else str(int(order.total * Decimal('4100')))
+        amount = f"{order.total:.2f}" if currency == 'USD' else str(int(order.total * Decimal('4100')))
 
         # Delegate to Bakong KHQR for instant embedded QR rendering
         khqr_data = super().create_payment(order, currency=currency)
@@ -178,12 +178,34 @@ class ABAPayWayGateway(BakongKHQRGateway):
         hash_raw = f"{req_time}{merchant_id}{tran_id}{amount}"
         signature_hash = self.get_hash(hash_raw, api_key) if api_key else ""
 
+        # Official PayWay Direct Link
+        direct_link = "https://link-sandbox.payway.com.kh/pS81031X"
+
+        payment, _ = Payment.objects.update_or_create(
+            order=order,
+            defaults={
+                'payment_method': Order.PaymentMethod.BAKONG_QR,
+                'amount': order.total,
+                'status': Payment.Status.PENDING,
+                'transaction_id': tran_id,
+                'payment_gateway_response': {
+                    **khqr_data,
+                    'aba_payway_url': f"{base_url}/api/payment-gateway/v1/payments/purchase",
+                    'aba_merchant_id': merchant_id,
+                    'req_time': req_time,
+                    'hash': signature_hash,
+                    'direct_pay_link': direct_link,
+                }
+            }
+        )
+
         return {
             **khqr_data,
             'aba_payway_url': f"{base_url}/api/payment-gateway/v1/payments/purchase",
             'aba_merchant_id': merchant_id,
             'req_time': req_time,
             'signature_hash': signature_hash,
+            'direct_pay_link': direct_link,
             'is_sandbox': 'sandbox' in base_url,
         }
 
