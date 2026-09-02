@@ -286,8 +286,8 @@ if EMAIL_HOST:
 else:
     EMAIL_BACKEND = os.getenv('EMAIL_BACKEND', 'django.core.mail.backends.console.EmailBackend')
 
-# Email Verification Requirement Flag (Defaults to True only if SMTP credentials are provided)
-EMAIL_VERIFICATION_REQUIRED = os.getenv('EMAIL_VERIFICATION_REQUIRED', 'True' if EMAIL_HOST else 'False').lower() in ('true', '1')
+# Email Verification Requirement Flag (Defaults to False unless explicitly set in environment)
+EMAIL_VERIFICATION_REQUIRED = os.getenv('EMAIL_VERIFICATION_REQUIRED', 'False').lower() in ('true', '1')
 
 # Google OAuth 2.0 & Frontend Domain Configuration
 FRONTEND_URL = os.getenv('FRONTEND_URL', 'https://market-sale-direct.vercel.app')
