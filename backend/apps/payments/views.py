@@ -4,9 +4,11 @@ from rest_framework.response import Response
 from rest_framework import status, permissions
 from drf_spectacular.utils import extend_schema
 from django.conf import settings
-from .models import Payment
+from django.db import transaction
+from .models import Payment, ProcessedWebhook
 from .services import PaymentService
 from apps.orders.models import Order
+from apps.core.throttling import PaymentRateThrottle
 
 logger = logging.getLogger(__name__)
 
@@ -14,6 +16,7 @@ logger = logging.getLogger(__name__)
 @extend_schema(tags=['Payments'])
 class InitiatePaymentView(APIView):
     permission_classes = [permissions.IsAuthenticated]
+    throttle_classes = [PaymentRateThrottle]
 
     def post(self, request, order_id):
         try:
@@ -33,6 +36,7 @@ class VerifyPaymentView(APIView):
     Reconciles payment status against the payment gateway (ABA PayWay / Bakong).
     """
     permission_classes = [permissions.IsAuthenticated]
+    throttle_classes = [PaymentRateThrottle]
 
     def post(self, request, order_id):
         try:
@@ -54,8 +58,10 @@ class ABAPayWayWebhookView(APIView):
     """
     Webhook receiver for ABA PayWay pushback notifications.
     Reconciles transaction with Check Transaction API before marking completed.
+    Guarantees idempotency via ProcessedWebhook records.
     """
     permission_classes = [permissions.AllowAny]
+    throttle_classes = [PaymentRateThrottle]
 
     def post(self, request):
         tran_id = request.data.get('tran_id') or request.POST.get('tran_id')
@@ -63,13 +69,26 @@ class ABAPayWayWebhookView(APIView):
         if not tran_id:
             return Response({'detail': 'Missing tran_id parameter.'}, status=status.HTTP_400_BAD_REQUEST)
 
+        # Idempotency check
+        if ProcessedWebhook.objects.filter(provider='ABA_PAYWAY', event_id=tran_id).exists():
+            logger.info("Webhook event for tran_id=%s has already been processed.", tran_id)
+            return Response({'status': 'already_processed', 'message': 'Duplicate event ignored.'})
+
         try:
             payment = Payment.objects.select_related('order').get(transaction_id=tran_id)
         except Payment.DoesNotExist:
             logger.warning("Payment with transaction_id=%s not found in system.", tran_id)
             return Response({'detail': 'Payment not found.'}, status=status.HTTP_404_NOT_FOUND)
 
-        success = PaymentService.verify_payment(payment)
+        with transaction.atomic():
+            success = PaymentService.verify_payment(payment)
+            if success:
+                ProcessedWebhook.objects.get_or_create(
+                    provider='ABA_PAYWAY',
+                    event_id=tran_id,
+                    defaults={'payload_hash': str(hash(tran_id))}
+                )
+
         return Response({
             'status': 'success' if success else 'unverified',
             'payment_status': payment.status

@@ -167,8 +167,8 @@ class ABAPayWayGateway(BakongKHQRGateway):
 
     def create_payment(self, order: Order, **kwargs) -> dict:
         base_url = getattr(settings, 'ABA_PAYWAY_BASE_URL', 'https://checkout-sandbox.payway.com.kh')
-        merchant_id = getattr(settings, 'ABA_PAYWAY_MERCHANT_ID', 'ec478104')
-        api_key = getattr(settings, 'ABA_PAYWAY_API_KEY', 'ce16f4443ee14a83052c02f3ac36d96f58f0fcae')
+        merchant_id = getattr(settings, 'ABA_PAYWAY_MERCHANT_ID', '')
+        api_key = getattr(settings, 'ABA_PAYWAY_API_KEY', '')
         currency = kwargs.get('currency', 'USD')
 
         req_time = timezone.now().strftime('%Y%m%d%H%M%S')

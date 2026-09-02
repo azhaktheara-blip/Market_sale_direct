@@ -10,12 +10,31 @@ from apps.core.analytics_views import (
     AdminDashboardAnalyticsView
 )
 
+from rest_framework import permissions
+
+class ProtectedSpectacularAPIView(SpectacularAPIView):
+    def get_permissions(self):
+        if not getattr(settings, 'DEBUG', False):
+            return [permissions.IsAdminUser()]
+        return [permissions.AllowAny()]
+
+class ProtectedSpectacularSwaggerView(SpectacularSwaggerView):
+    def get_permissions(self):
+        if not getattr(settings, 'DEBUG', False):
+            return [permissions.IsAdminUser()]
+        return [permissions.AllowAny()]
+
+class ProtectedSpectacularRedocView(SpectacularRedocView):
+    def get_permissions(self):
+        if not getattr(settings, 'DEBUG', False):
+            return [permissions.IsAdminUser()]
+        return [permissions.AllowAny()]
+
 def api_root(request):
     return JsonResponse({
         'status': 'healthy',
         'service': 'FarmerDirect Marketplace API',
         'version': '1.0.0',
-        'documentation': '/swagger/',
         'admin': '/admin/',
         'api_v1_endpoints': {
             'products': '/api/v1/products/',
@@ -30,10 +49,10 @@ urlpatterns = [
     path('', api_root, name='api-root'),
     path('admin/', admin.site.urls),
 
-    # OpenAPI Schema & Interactive Docs
-    path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
-    path('swagger/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
-    path('redoc/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),
+    # OpenAPI Schema & Interactive Docs (Gated in production)
+    path('api/schema/', ProtectedSpectacularAPIView.as_view(), name='schema'),
+    path('swagger/', ProtectedSpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
+    path('redoc/', ProtectedSpectacularRedocView.as_view(url_name='schema'), name='redoc'),
 
     # API v1 Endpoints
     path('api/v1/', include('apps.accounts.urls')),

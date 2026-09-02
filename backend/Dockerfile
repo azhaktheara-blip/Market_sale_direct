@@ -13,17 +13,22 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     netcat-traditional \
     && rm -rf /var/lib/apt/lists/*
 
+# Create dedicated non-root application user
+RUN addgroup --system app && adduser --system --ingroup app app
+
 # Install python dependencies
 COPY requirements.txt /app/
 RUN pip install --no-cache-dir -r requirements.txt gunicorn
 
-# Copy project files
+# Copy project files and ensure non-root ownership
 COPY . /app/
+RUN mkdir -p /app/staticfiles /app/media && chown -R app:app /app
 
 # Make entrypoint executable
 RUN chmod +x /app/entrypoint.sh 2>/dev/null || true
 
+USER app
+
 EXPOSE 8000
 
 CMD ["gunicorn", "config.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "3", "--threads", "2"]
-

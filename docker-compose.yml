@@ -1,7 +1,14 @@
 version: '3.8'
 
+networks:
+  public_net:
+    driver: bridge
+  internal_net:
+    internal: false
+    driver: bridge
+
 services:
-  # 1. PostgreSQL Database
+  # 1. PostgreSQL Database (Internal only, not exposed to host)
   db:
     image: postgres:16-alpine
     container_name: farmer_direct_db
@@ -9,26 +16,27 @@ services:
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-farmer_direct_db}
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres123}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Database password required}
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
+    networks:
+      - internal_net
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
       interval: 5s
       timeout: 5s
       retries: 5
 
-  # 2. Redis Cache & Celery Broker
+  # 2. Redis Cache & Celery Broker (Internal only)
   redis:
     image: redis:7-alpine
     container_name: farmer_direct_redis
     restart: unless-stopped
-    ports:
-      - "6379:6379"
+    command: redis-server --appendonly yes
     volumes:
       - redis_data:/data
+    networks:
+      - internal_net
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
@@ -47,20 +55,20 @@ services:
              python manage.py collectstatic --noinput &&
              gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 3 --threads 2"
     volumes:
-      - ./backend:/app
       - static_volume:/app/staticfiles
       - media_volume:/app/media
     environment:
-      - SECRET_KEY=${SECRET_KEY:-django-insecure-production-super-secret-key-farmer-direct-2026}
-      - DEBUG=${DEBUG:-True}
+      - SECRET_KEY=${SECRET_KEY:?Django SECRET_KEY must be set in environment}
+      - DEBUG=${DEBUG:-False}
       - ALLOWED_HOSTS=${ALLOWED_HOSTS:-localhost,127.0.0.1,backend,frontend}
       - CORS_ALLOWED_ORIGINS=${CORS_ALLOWED_ORIGINS:-http://localhost,http://localhost:80,http://localhost:5173,http://127.0.0.1:5173}
-      - DATABASE_URL=postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres123}@db:5432/${POSTGRES_DB:-farmer_direct_db}
+      - DATABASE_URL=postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-farmer_direct_db}
       - REDIS_URL=redis://redis:6379/1
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
-    ports:
-      - "8000:8000"
+    networks:
+      - internal_net
+      - public_net
     depends_on:
       db:
         condition: service_healthy
@@ -76,14 +84,15 @@ services:
     restart: unless-stopped
     command: celery -A config worker --loglevel=info --concurrency=2
     volumes:
-      - ./backend:/app
       - media_volume:/app/media
     environment:
-      - SECRET_KEY=${SECRET_KEY:-django-insecure-production-super-secret-key-farmer-direct-2026}
-      - DATABASE_URL=postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres123}@db:5432/${POSTGRES_DB:-farmer_direct_db}
+      - SECRET_KEY=${SECRET_KEY:?Django SECRET_KEY must be set in environment}
+      - DATABASE_URL=postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-farmer_direct_db}
       - REDIS_URL=redis://redis:6379/1
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    networks:
+      - internal_net
     depends_on:
       backend:
         condition: service_started
@@ -98,14 +107,14 @@ services:
     container_name: farmer_direct_celery_beat
     restart: unless-stopped
     command: celery -A config beat --loglevel=info
-    volumes:
-      - ./backend:/app
     environment:
-      - SECRET_KEY=${SECRET_KEY:-django-insecure-production-super-secret-key-farmer-direct-2026}
-      - DATABASE_URL=postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres123}@db:5432/${POSTGRES_DB:-farmer_direct_db}
+      - SECRET_KEY=${SECRET_KEY:?Django SECRET_KEY must be set in environment}
+      - DATABASE_URL=postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-farmer_direct_db}
       - REDIS_URL=redis://redis:6379/1
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    networks:
+      - internal_net
     depends_on:
       backend:
         condition: service_started
@@ -121,6 +130,8 @@ services:
     restart: unless-stopped
     ports:
       - "80:80"
+    networks:
+      - public_net
     depends_on:
       - backend
 
@@ -129,4 +140,3 @@ volumes:
   redis_data:
   static_volume:
   media_volume:
-

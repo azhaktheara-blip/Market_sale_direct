@@ -21,3 +21,15 @@ class Payment(TimeStampedModel):
     def __str__(self):
         return f"Payment for {self.order.order_number}: ${self.amount} ({self.status})"
 
+
+class ProcessedWebhook(TimeStampedModel):
+    """
+    Guarantees idempotency and replay protection for payment webhooks.
+    """
+    provider = models.CharField(max_length=50, db_index=True)
+    event_id = models.CharField(max_length=255, unique=True, db_index=True)
+    payload_hash = models.CharField(max_length=64, blank=True)
+    processed_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.provider} - {self.event_id}"

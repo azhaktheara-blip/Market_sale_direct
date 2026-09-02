@@ -24,8 +24,8 @@ class PayWayClient:
         api_key: Optional[str] = None
     ):
         self.base_url = (base_url or getattr(settings, 'ABA_PAYWAY_BASE_URL', 'https://checkout-sandbox.payway.com.kh')).rstrip('/')
-        self.merchant_id = merchant_id or getattr(settings, 'ABA_PAYWAY_MERCHANT_ID', 'ec478104')
-        self.api_key = api_key or getattr(settings, 'ABA_PAYWAY_API_KEY', 'ce16f4443ee14a83052c02f3ac36d96f58f0fcae')
+        self.merchant_id = merchant_id or getattr(settings, 'ABA_PAYWAY_MERCHANT_ID', '')
+        self.api_key = api_key or getattr(settings, 'ABA_PAYWAY_API_KEY', '')
 
     def get_hash(self, raw_string: str) -> str:
         """Computes ABA PayWay HMAC-SHA512 signature in Base64."""

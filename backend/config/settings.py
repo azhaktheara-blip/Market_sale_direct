@@ -80,9 +80,10 @@ MIDDLEWARE = [
 
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
-# High-Performance Shared Caching (Redis in Production, LocMem in Dev)
+# High-Performance Shared Caching (Redis in Production, LocMem in Dev / Testing)
+IS_TESTING = 'test' in sys.argv
 REDIS_CACHE_URL = os.getenv('REDIS_CACHE_URL', os.getenv('REDIS_URL'))
-if REDIS_CACHE_URL:
+if REDIS_CACHE_URL and not IS_TESTING:
     CACHES = {
         'default': {
             'BACKEND': 'django.core.cache.backends.redis.RedisCache',
@@ -177,6 +178,18 @@ REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': (
         'rest_framework.permissions.IsAuthenticatedOrReadOnly',
     ),
+    'DEFAULT_THROTTLE_CLASSES': (
+        'rest_framework.throttling.AnonRateThrottle',
+        'rest_framework.throttling.UserRateThrottle',
+    ),
+    'DEFAULT_THROTTLE_RATES': {
+        'anon': '100/hour',
+        'user': '1000/hour',
+        'auth': '10/minute',
+        'payment': '30/minute',
+        'search': '60/minute',
+        'upload': '20/minute',
+    },
     'DEFAULT_PAGINATION_CLASS': 'apps.core.pagination.StandardResultsSetPagination',
     'PAGE_SIZE': 12,
     'DEFAULT_FILTER_BACKENDS': (
@@ -217,6 +230,17 @@ else:
         'http://localhost:80',
         'http://localhost',
         'https://market-sale-direct.vercel.app',
+    ]
+
+csrf_trusted_env = os.getenv('CSRF_TRUSTED_ORIGINS')
+if csrf_trusted_env:
+    CSRF_TRUSTED_ORIGINS = [orig.strip() for orig in csrf_trusted_env.split(',') if orig.strip()]
+else:
+    CSRF_TRUSTED_ORIGINS = [
+        'https://market-sale-direct.vercel.app',
+        'https://farmer-direct-backend.onrender.com',
+        'http://localhost:5173',
+        'http://localhost:3000',
     ]
 
 CORS_ALLOWED_ORIGIN_REGEXES = [
@@ -264,12 +288,19 @@ GOOGLE_OAUTH_CLIENT_ID = os.getenv('GOOGLE_OAUTH_CLIENT_ID', '')
 
 # ABA PayWay & Bakong KHQR Gateway Configuration
 ABA_PAYWAY_BASE_URL = os.getenv('ABA_PAYWAY_BASE_URL', 'https://checkout-sandbox.payway.com.kh')
-ABA_PAYWAY_MERCHANT_ID = os.getenv('ABA_PAYWAY_MERCHANT_ID', 'ec478104')
+ABA_PAYWAY_MERCHANT_ID = os.getenv('ABA_PAYWAY_MERCHANT_ID', '')
 ABA_PAYWAY_API_KEY = os.getenv('ABA_PAYWAY_API_KEY', '')
 
 # Marketplace Economics
 MARKETPLACE_COMMISSION_PERCENTAGE = float(os.getenv('MARKETPLACE_COMMISSION_PERCENTAGE', 5.0))
 DEFAULT_DELIVERY_FEE = float(os.getenv('DEFAULT_DELIVERY_FEE', 2.00))
+
+# Security Headers & Cookies
+SESSION_COOKIE_HTTPONLY = True
+CSRF_COOKIE_HTTPONLY = False
+SECURE_CONTENT_TYPE_NOSNIFF = True
+X_FRAME_OPTIONS = 'DENY'
+SECURE_REFERRER_POLICY = 'strict-origin-when-cross-origin'
 
 # Production Security & SSL Flags
 if not DEBUG:

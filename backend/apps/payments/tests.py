@@ -41,6 +41,7 @@ class PaymentSecurityTests(TestCase):
             payment_status=Order.PaymentStatus.PENDING
         )
 
+    @override_settings(ABA_PAYWAY_MERCHANT_ID='ec478104', ABA_PAYWAY_API_KEY='test-merchant-api-key')
     def test_initiate_aba_payway_payment_returns_hash(self):
         self.client.force_authenticate(user=self.customer_user)
         response = self.client.post(f'/api/v1/payments/{self.order.id}/initiate/', {
