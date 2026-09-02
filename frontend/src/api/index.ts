@@ -24,12 +24,21 @@ import {
 } from '../types';
 
 export const authApi = {
-  register: (data: Record<string, unknown>) => apiClient.post<{ status: string; tokens: { access: string; refresh: string }; user: User }>('/auth/register/', data),
-  login: (data: { email: string; password: string }) => apiClient.post<{ access: string; refresh: string; user: User }>('/auth/login/', data),
+  register: (data: Record<string, unknown>) =>
+    apiClient.post<{ status: string; message: string; requires_verification?: boolean; email?: string; user?: User }>('/auth/register/', data),
+  login: (data: { email: string; password: string }) =>
+    apiClient.post<{ access: string; refresh: string; user: User }>('/auth/login/', data),
+  verifyEmail: (data: { uid: string; token: string }) =>
+    apiClient.post<{ status: string; message: string; tokens: { access: string; refresh: string }; user: User }>('/auth/verify-email/', data),
+  resendVerification: (data: { email: string }) =>
+    apiClient.post<{ status: string; message: string }>('/auth/resend-verification/', data),
+  googleAuth: (data: { id_token: string }) =>
+    apiClient.post<{ status: string; message: string; tokens: { access: string; refresh: string }; user: User }>('/auth/google/', data),
   getMe: () => apiClient.get<User>('/auth/me/'),
-  updateProfile: (data: FormData | Record<string, unknown>) => apiClient.patch<User>('/auth/me/', data, {
-    headers: data instanceof FormData ? { 'Content-Type': 'multipart/form-data' } : undefined,
-  }),
+  updateProfile: (data: FormData | Record<string, unknown>) =>
+    apiClient.patch<User>('/auth/me/', data, {
+      headers: data instanceof FormData ? { 'Content-Type': 'multipart/form-data' } : undefined,
+    }),
 };
 
 export const addressesApi = {

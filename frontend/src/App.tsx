@@ -27,6 +27,7 @@ const AboutPage = lazy(() => import('./pages/public/AboutPage').then(m => ({ def
 // Auth Pages (Lazy)
 const LoginPage = lazy(() => import('./pages/auth/LoginPage').then(m => ({ default: m.LoginPage })));
 const RegisterPage = lazy(() => import('./pages/auth/RegisterPage').then(m => ({ default: m.RegisterPage })));
+const VerifyEmailPage = lazy(() => import('./pages/auth/VerifyEmailPage').then(m => ({ default: m.VerifyEmailPage })));
 
 // Customer Shopping & Portal Pages (Lazy)
 const CartPage = lazy(() => import('./pages/customer/CartPage').then(m => ({ default: m.CartPage })));
@@ -99,6 +100,7 @@ export const App: React.FC = () => {
 
                     <Route path="/login" element={<LoginPage />} />
                     <Route path="/register" element={<RegisterPage />} />
+                    <Route path="/verify-email" element={<VerifyEmailPage />} />
 
                     <Route path="/customer/cart" element={<CartPage />} />
                     <Route path="/customer/checkout" element={<CheckoutPage />} />

@@ -2,12 +2,22 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User } from '../types';
 import { authApi } from '../api';
 
+interface RegisterResponse {
+  requires_verification?: boolean;
+  email?: string;
+  message?: string;
+  user?: User;
+}
+
 interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<User>;
-  register: (data: Record<string, unknown>) => Promise<User>;
+  register: (data: Record<string, unknown>) => Promise<RegisterResponse>;
+  googleLogin: (idToken: string) => Promise<User>;
+  verifyEmail: (uid: string, token: string) => Promise<User>;
+  resendVerification: (email: string) => Promise<{ status: string; message: string }>;
   logout: () => void;
   updateUser: (user: User) => void;
 }
@@ -50,13 +60,37 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return res.data.user;
   };
 
-  const register = async (data: Record<string, unknown>): Promise<User> => {
+  const register = async (data: Record<string, unknown>): Promise<RegisterResponse> => {
     const res = await authApi.register(data);
+    return {
+      requires_verification: res.data.requires_verification ?? true,
+      email: res.data.email || (data.email as string),
+      message: res.data.message,
+      user: res.data.user,
+    };
+  };
+
+  const googleLogin = async (idToken: string): Promise<User> => {
+    const res = await authApi.googleAuth({ id_token: idToken });
     localStorage.setItem('access_token', res.data.tokens.access);
     localStorage.setItem('refresh_token', res.data.tokens.refresh);
     localStorage.setItem('user', JSON.stringify(res.data.user));
     setUser(res.data.user);
     return res.data.user;
+  };
+
+  const verifyEmail = async (uid: string, token: string): Promise<User> => {
+    const res = await authApi.verifyEmail({ uid, token });
+    localStorage.setItem('access_token', res.data.tokens.access);
+    localStorage.setItem('refresh_token', res.data.tokens.refresh);
+    localStorage.setItem('user', JSON.stringify(res.data.user));
+    setUser(res.data.user);
+    return res.data.user;
+  };
+
+  const resendVerification = async (email: string) => {
+    const res = await authApi.resendVerification({ email });
+    return res.data;
   };
 
   const logout = () => {
@@ -79,6 +113,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isLoading,
         login,
         register,
+        googleLogin,
+        verifyEmail,
+        resendVerification,
         logout,
         updateUser,
       }}
@@ -95,4 +132,3 @@ export const useAuth = () => {
   }
   return context;
 };
-
