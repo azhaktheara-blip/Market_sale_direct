@@ -15,6 +15,8 @@ import { Modal } from '../../components/common/Modal';
 import { Input } from '../../components/common/Input';
 import { StarRating } from '../../components/common/StarRating';
 import { Skeleton } from '../../components/common/Skeleton';
+import { BakongPaymentModal } from '../../components/payments/BakongPaymentModal';
+import { CardPaymentModal } from '../../components/payments/CardPaymentModal';
 import type { OrderItem } from '../../types';
 
 export const CustomerOrderDetailPage: React.FC = () => {
@@ -27,6 +29,9 @@ export const CustomerOrderDetailPage: React.FC = () => {
   const [reviewRating, setReviewRating] = useState<number>(5);
   const [reviewTitle, setReviewTitle] = useState('');
   const [reviewComment, setReviewComment] = useState('');
+  
+  const [isBakongModalOpen, setIsBakongModalOpen] = useState(false);
+  const [isCardModalOpen, setIsCardModalOpen] = useState(false);
 
   const { data: order, isLoading } = useQuery({
     queryKey: ['order', id],
@@ -252,9 +257,45 @@ export const CustomerOrderDetailPage: React.FC = () => {
               <span>Payment Status:</span>
               <Badge statusValue={order.payment_status} size="sm" />
             </div>
+            {order.payment_status === 'PENDING' && order.payment_method !== 'COD' && !isCancelled && (
+              <div className="pt-4 border-t border-stone-100">
+                <Button 
+                  onClick={() => order.payment_method === 'BAKONG_QR' ? setIsBakongModalOpen(true) : setIsCardModalOpen(true)}
+                  variant="primary" 
+                  size="sm" 
+                  className="w-full font-bold"
+                >
+                  Pay Now
+                </Button>
+              </div>
+            )}
           </div>
         </div>
       </div>
+
+      <BakongPaymentModal
+        isOpen={isBakongModalOpen}
+        onClose={() => setIsBakongModalOpen(false)}
+        orderId={order.id}
+        orderNumber={order.order_number}
+        totalAmountUSD={order.total}
+        onPaymentSuccess={() => {
+          setIsBakongModalOpen(false);
+          queryClient.invalidateQueries({ queryKey: ['order', id] });
+        }}
+      />
+
+      <CardPaymentModal
+        isOpen={isCardModalOpen}
+        onClose={() => setIsCardModalOpen(false)}
+        orderId={order.id}
+        orderNumber={order.order_number}
+        totalAmountUSD={order.total}
+        onPaymentSuccess={() => {
+          setIsCardModalOpen(false);
+          queryClient.invalidateQueries({ queryKey: ['order', id] });
+        }}
+      />
 
       <Modal
         isOpen={isCancelModalOpen}
