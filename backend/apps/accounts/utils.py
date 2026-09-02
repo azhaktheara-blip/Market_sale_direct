@@ -102,3 +102,4 @@ def send_verification_email(user, request=None) -> bool:
     except Exception as e:
         logger.error("Failed to send verification email to %s: %s", user.email, e)
         return False
+
