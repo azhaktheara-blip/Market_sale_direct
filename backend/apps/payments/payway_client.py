@@ -62,3 +62,4 @@ class PayWayClient:
         except requests.RequestException as e:
             logger.error("Failed to connect to ABA PayWay check-transaction: %s", e)
             return {'status': -1, 'description': str(e)}
+

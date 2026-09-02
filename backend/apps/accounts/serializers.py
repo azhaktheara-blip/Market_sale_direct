@@ -28,10 +28,11 @@ class UserSerializer(serializers.ModelSerializer):
         model = User
         fields = [
             'id', 'email', 'username', 'phone_number', 'role',
+            'email_verified', 'auth_provider',
             'avatar', 'customer_profile', 'farmer_profile',
             'created_at', 'updated_at'
         ]
-        read_only_fields = ['id', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'email_verified', 'auth_provider', 'created_at', 'updated_at']
 
 
 from django.contrib.auth.password_validation import validate_password
@@ -121,12 +122,23 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         data = super().validate(attrs)
         user = self.user
 
+        # Gate login on email verification
+        if not user.is_staff and not user.is_superuser:
+            if not user.email_verified and getattr(user, 'auth_provider', 'EMAIL') == User.AuthProvider.EMAIL:
+                raise serializers.ValidationError({
+                    'detail': 'Please verify your email address before logging in.',
+                    'code': 'email_not_verified',
+                    'email': user.email
+                })
+
         user_data = {
             'id': str(user.id),
             'email': user.email,
             'username': user.username,
             'phone_number': user.phone_number,
             'role': user.role,
+            'email_verified': user.email_verified,
+            'auth_provider': user.auth_provider,
             'avatar': user.avatar.url if user.avatar else None,
         }
 
@@ -151,6 +163,19 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
 
         data['user'] = user_data
         return data
+
+
+class VerifyEmailSerializer(serializers.Serializer):
+    uid = serializers.CharField(required=True)
+    token = serializers.CharField(required=True)
+
+
+class ResendVerificationSerializer(serializers.Serializer):
+    email = serializers.EmailField(required=True)
+
+
+class GoogleAuthSerializer(serializers.Serializer):
+    id_token = serializers.CharField(required=True)
 
 
 class UserProfileUpdateSerializer(serializers.ModelSerializer):

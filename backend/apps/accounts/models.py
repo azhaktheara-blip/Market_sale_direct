@@ -42,11 +42,18 @@ class User(AbstractUser):
         FARMER = 'FARMER', 'Farmer / Producer'
         ADMIN = 'ADMIN', 'Marketplace Admin'
 
+    class AuthProvider(models.TextChoices):
+        EMAIL = 'EMAIL', 'Email & Password'
+        GOOGLE = 'GOOGLE', 'Google OAuth 2.0'
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     email = models.EmailField(unique=True, db_index=True)
     phone_number = models.CharField(max_length=30, blank=True, null=True)
     role = models.CharField(max_length=20, choices=Role.choices, default=Role.CUSTOMER, db_index=True)
     avatar = models.ImageField(upload_to='avatars/', blank=True, null=True)
+    email_verified = models.BooleanField(default=False, db_index=True)
+    auth_provider = models.CharField(max_length=20, choices=AuthProvider.choices, default=AuthProvider.EMAIL, db_index=True)
+    google_sub = models.CharField(max_length=255, blank=True, null=True, unique=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

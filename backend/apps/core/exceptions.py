@@ -28,6 +28,10 @@ def custom_exception_handler(exc, context):
         }
 
         if isinstance(response.data, dict):
+            if "code" in response.data:
+                custom_data["code"] = str(response.data["code"])
+            if "email" in response.data:
+                custom_data["email"] = str(response.data["email"])
             if "detail" in response.data:
                 custom_data["message"] = str(response.data["detail"])
             else:

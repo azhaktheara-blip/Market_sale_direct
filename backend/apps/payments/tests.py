@@ -70,3 +70,4 @@ class PaymentSecurityTests(TestCase):
         raw_str = "20260901120000ec478104ABA-FD-00110.00"
         sig = client.get_hash(raw_str)
         self.assertTrue(len(sig) > 20)
+

@@ -5,7 +5,10 @@ from .views import (
     CustomTokenObtainPairView,
     CustomTokenRefreshView,
     CurrentUserView,
-    AddressViewSet
+    AddressViewSet,
+    VerifyEmailView,
+    ResendVerificationEmailView,
+    GoogleAuthView,
 )
 
 router = DefaultRouter()
@@ -15,6 +18,9 @@ urlpatterns = [
     path('auth/register/', RegisterView.as_view(), name='auth-register'),
     path('auth/login/', CustomTokenObtainPairView.as_view(), name='auth-login'),
     path('auth/refresh/', CustomTokenRefreshView.as_view(), name='auth-refresh'),
+    path('auth/verify-email/', VerifyEmailView.as_view(), name='verify-email'),
+    path('auth/resend-verification/', ResendVerificationEmailView.as_view(), name='resend-verification'),
+    path('auth/google/', GoogleAuthView.as_view(), name='google-auth'),
     path('auth/me/', CurrentUserView.as_view(), name='auth-me'),
     path('', include(router.urls)),
 ]

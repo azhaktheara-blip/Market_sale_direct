@@ -249,10 +249,23 @@ CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = TIME_ZONE
 
+# Email Configuration
+EMAIL_BACKEND = os.getenv('EMAIL_BACKEND', 'django.core.mail.backends.console.EmailBackend')
+DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'FarmerDirect <noreply@farmerdirect.com>')
+EMAIL_HOST = os.getenv('EMAIL_HOST', '')
+EMAIL_PORT = int(os.getenv('EMAIL_PORT', '587'))
+EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', '')
+EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', '')
+EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS', 'True').lower() in ('true', '1')
+
+# Google OAuth 2.0 & Frontend Domain Configuration
+FRONTEND_URL = os.getenv('FRONTEND_URL', 'https://market-sale-direct.vercel.app')
+GOOGLE_OAUTH_CLIENT_ID = os.getenv('GOOGLE_OAUTH_CLIENT_ID', '')
+
 # ABA PayWay & Bakong KHQR Gateway Configuration
 ABA_PAYWAY_BASE_URL = os.getenv('ABA_PAYWAY_BASE_URL', 'https://checkout-sandbox.payway.com.kh')
 ABA_PAYWAY_MERCHANT_ID = os.getenv('ABA_PAYWAY_MERCHANT_ID', 'ec478104')
-ABA_PAYWAY_API_KEY = os.getenv('ABA_PAYWAY_API_KEY', 'ce16f4443ee14a83052c02f3ac36d96f58f0fcae')
+ABA_PAYWAY_API_KEY = os.getenv('ABA_PAYWAY_API_KEY', '')
 
 # Marketplace Economics
 MARKETPLACE_COMMISSION_PERCENTAGE = float(os.getenv('MARKETPLACE_COMMISSION_PERCENTAGE', 5.0))
