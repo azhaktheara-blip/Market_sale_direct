@@ -26,10 +26,11 @@ export const LoginPage: React.FC = () => {
   const [isResending, setIsResending] = useState<boolean>(false);
   const [resendSuccess, setResendSuccess] = useState<boolean>(false);
 
+  const hasGoogleClientId = Boolean((import.meta as any).env?.VITE_GOOGLE_CLIENT_ID);
+
   const {
     register,
     handleSubmit,
-    setValue,
     formState: { errors, isSubmitting },
   } = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
@@ -57,7 +58,7 @@ export const LoginPage: React.FC = () => {
       setServerError(null);
       setIsUnverified(false);
       setResendSuccess(false);
-      const user = await login(data.email, data.password);
+      const user = await login(data.email.trim(), data.password);
       handleSuccessfulAuth(user);
     } catch (err: any) {
       const code = err.response?.data?.code;
@@ -65,7 +66,7 @@ export const LoginPage: React.FC = () => {
       
       if (code === 'email_not_verified' || msg.toLowerCase().includes('verify your email')) {
         setIsUnverified(true);
-        setUnverifiedEmail(data.email);
+        setUnverifiedEmail(data.email.trim());
         setServerError('Your email address has not been verified yet. Please check your inbox.');
       } else {
         setServerError(msg || 'Invalid email or password. Please try again.');
@@ -97,11 +98,6 @@ export const LoginPage: React.FC = () => {
     }
   };
 
-  const handleQuickFill = (email: string, pass: string) => {
-    setValue('email', email);
-    setValue('password', pass);
-  };
-
   return (
     <div className="min-h-[calc(100vh-12rem)] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-7 bg-white p-8 sm:p-10 rounded-3xl border border-stone-200 shadow-soft">
@@ -113,19 +109,21 @@ export const LoginPage: React.FC = () => {
             Welcome back
           </h2>
           <p className="text-xs text-stone-500">
-            Sign in to access your direct farm orders, wishlist, or grower dashboard.
+            Sign in with your email and password to access your orders and dashboard.
           </p>
         </div>
 
-        {/* Google Sign In Component */}
-        <div className="space-y-3">
-          <GoogleSignInButton onSuccess={handleGoogleSuccess} text="signin_with" />
-          <div className="relative flex items-center justify-center">
-            <div className="border-t border-stone-200 w-full" />
-            <span className="bg-white px-3 text-[11px] text-stone-400 font-bold uppercase tracking-wider">or sign in with email</span>
-            <div className="border-t border-stone-200 w-full" />
+        {/* Google Sign In Component (only rendered if Google Client ID is configured) */}
+        {hasGoogleClientId && (
+          <div className="space-y-3">
+            <GoogleSignInButton onSuccess={handleGoogleSuccess} text="signin_with" />
+            <div className="relative flex items-center justify-center">
+              <div className="border-t border-stone-200 w-full" />
+              <span className="bg-white px-3 text-[11px] text-stone-400 font-bold uppercase tracking-wider">or sign in with email</span>
+              <div className="border-t border-stone-200 w-full" />
+            </div>
           </div>
-        </div>
+        )}
 
         {serverError && (
           <div className="p-3.5 rounded-2xl bg-rose-50 border border-rose-200 text-rose-800 text-xs space-y-2">
@@ -162,15 +160,17 @@ export const LoginPage: React.FC = () => {
             placeholder="your.email@example.com"
             leftIcon={<Mail className="w-4 h-4" />}
             error={errors.email?.message}
+            autoComplete="email"
             {...register('email')}
           />
 
           <Input
             label="Password"
             type="password"
-            placeholder="••••••••"
+            placeholder="Enter your password"
             leftIcon={<Lock className="w-4 h-4" />}
             error={errors.password?.message}
+            autoComplete="current-password"
             {...register('password')}
           />
 
@@ -185,37 +185,7 @@ export const LoginPage: React.FC = () => {
           </Button>
         </form>
 
-        {/* Demo Fast Logins for Pairing / Testing */}
-        <div className="pt-4 border-t border-stone-100 space-y-2">
-          <span className="text-[11px] font-bold text-stone-400 uppercase tracking-wider block text-center">
-            Quick Test Autofill
-          </span>
-          <div className="grid grid-cols-3 gap-2 text-[11px]">
-            <button
-              type="button"
-              onClick={() => handleQuickFill('customer@example.com', 'SecureKhmer@2026!')}
-              className="p-2 rounded-xl bg-stone-50 hover:bg-stone-100 border border-stone-200 font-semibold text-stone-700 text-center transition-colors"
-            >
-              👤 Customer
-            </button>
-            <button
-              type="button"
-              onClick={() => handleQuickFill('sokha.farm@farmerdirect.com', 'farmer123456')}
-              className="p-2 rounded-xl bg-forest-50 hover:bg-forest-100 border border-forest-200 font-semibold text-forest-800 text-center transition-colors"
-            >
-              🚜 Farmer
-            </button>
-            <button
-              type="button"
-              onClick={() => handleQuickFill('admin@farmerdirect.com', 'admin123456')}
-              className="p-2 rounded-xl bg-purple-50 hover:bg-purple-100 border border-purple-200 font-semibold text-purple-800 text-center transition-colors"
-            >
-              🛡️ Admin
-            </button>
-          </div>
-        </div>
-
-        <div className="text-center text-xs text-stone-500">
+        <div className="text-center text-xs text-stone-500 pt-2 border-t border-stone-100">
           Don't have an account?{' '}
           <Link to="/register" className="font-bold text-forest-700 hover:text-forest-800">
             Create account

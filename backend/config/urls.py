@@ -30,12 +30,15 @@ class ProtectedSpectacularRedocView(SpectacularRedocView):
             return [permissions.IsAdminUser()]
         return [permissions.AllowAny()]
 
+import os
+
+ADMIN_URL = os.getenv('ADMIN_URL', 'farmer-direct-saleadmin').strip('/')
+
 def api_root(request):
     return JsonResponse({
         'status': 'healthy',
         'service': 'FarmerDirect Marketplace API',
         'version': '1.0.0',
-        'admin': '/admin/',
         'api_v1_endpoints': {
             'products': '/api/v1/products/',
             'categories': '/api/v1/categories/',
@@ -47,7 +50,7 @@ def api_root(request):
 
 urlpatterns = [
     path('', api_root, name='api-root'),
-    path('admin/', admin.site.urls),
+    path(f'{ADMIN_URL}/', admin.site.urls),
 
     # OpenAPI Schema & Interactive Docs (Gated in production)
     path('api/schema/', ProtectedSpectacularAPIView.as_view(), name='schema'),

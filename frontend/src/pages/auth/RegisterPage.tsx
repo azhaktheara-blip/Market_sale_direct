@@ -54,6 +54,8 @@ export const RegisterPage: React.FC = () => {
   const [isResending, setIsResending] = useState<boolean>(false);
   const [resendSuccess, setResendSuccess] = useState<boolean>(false);
 
+  const hasGoogleClientId = Boolean((import.meta as any).env?.VITE_GOOGLE_CLIENT_ID);
+
   const provinces = [
     'Siem Reap',
     'Battambang',
@@ -215,7 +217,7 @@ export const RegisterPage: React.FC = () => {
         </div>
 
         {/* Google Quick Sign-Up for Customers */}
-        {selectedRole === 'CUSTOMER' && (
+        {selectedRole === 'CUSTOMER' && hasGoogleClientId && (
           <div className="space-y-3">
             <GoogleSignInButton onSuccess={handleGoogleSuccess} text="signup_with" />
             <div className="relative flex items-center justify-center">
