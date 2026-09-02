@@ -1,4 +1,4 @@
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.contrib.auth import get_user_model
 from rest_framework.test import APIClient
 from rest_framework import status
@@ -13,7 +13,8 @@ class AccountsAuthTests(TestCase):
     def setUp(self):
         self.client = APIClient()
 
-    def test_customer_registration_requires_verification(self):
+    @override_settings(EMAIL_VERIFICATION_REQUIRED=True)
+    def test_customer_registration_requires_verification_when_enabled(self):
         payload = {
             'email': 'newbuyer@example.com',
             'username': 'newbuyer',
@@ -32,7 +33,26 @@ class AccountsAuthTests(TestCase):
         self.assertFalse(user.email_verified)
         self.assertTrue(CustomerProfile.objects.filter(user=user).exists())
 
-    def test_unverified_user_cannot_login(self):
+    @override_settings(EMAIL_VERIFICATION_REQUIRED=False)
+    def test_customer_registration_auto_logs_in_when_verification_disabled(self):
+        payload = {
+            'email': 'autobuyer@example.com',
+            'username': 'autobuyer',
+            'password': 'SecureKhmer@2026!',
+            'role': 'CUSTOMER',
+            'phone_number': '+85512000222',
+        }
+        response = self.client.post('/api/v1/auth/register/', payload)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertFalse(response.data.get('requires_verification'))
+        self.assertIn('tokens', response.data)
+        self.assertIn('access', response.data['tokens'])
+        
+        user = User.objects.get(email='autobuyer@example.com')
+        self.assertTrue(user.email_verified)
+
+    @override_settings(EMAIL_VERIFICATION_REQUIRED=True)
+    def test_unverified_user_cannot_login_when_verification_required(self):
         User.objects.create_user(
             email='unverified@example.com',
             password='SecureKhmer@2026!',
@@ -45,6 +65,21 @@ class AccountsAuthTests(TestCase):
         })
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn('email_not_verified', str(response.data))
+
+    @override_settings(EMAIL_VERIFICATION_REQUIRED=False)
+    def test_unverified_user_auto_healed_on_login_when_verification_disabled(self):
+        User.objects.create_user(
+            email='legacyuser@example.com',
+            password='SecureKhmer@2026!',
+            role='CUSTOMER',
+            email_verified=False
+        )
+        response = self.client.post('/api/v1/auth/login/', {
+            'email': 'legacyuser@example.com',
+            'password': 'SecureKhmer@2026!'
+        })
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn('access', response.data)
 
     def test_email_verification_success_and_auto_login(self):
         user = User.objects.create_user(

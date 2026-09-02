@@ -47,17 +47,30 @@ class RegisterView(generics.CreateAPIView):
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
         
-        # Send email verification link
-        send_verification_email(user, request=request)
         user_serializer = UserSerializer(user, context={'request': request})
-        
-        return Response({
-            'status': 'success',
-            'message': 'Registration successful. A verification link has been sent to your email address.',
-            'requires_verification': True,
-            'email': user.email,
-            'user': user_serializer.data
-        }, status=status.HTTP_201_CREATED)
+        verification_required = getattr(settings, 'EMAIL_VERIFICATION_REQUIRED', False)
+
+        if verification_required:
+            send_verification_email(user, request=request)
+            return Response({
+                'status': 'success',
+                'message': 'Registration successful. A verification link has been sent to your email address.',
+                'requires_verification': True,
+                'email': user.email,
+                'user': user_serializer.data
+            }, status=status.HTTP_201_CREATED)
+        else:
+            refresh = RefreshToken.for_user(user)
+            return Response({
+                'status': 'success',
+                'message': 'Registration successful. Welcome to FarmerDirect!',
+                'requires_verification': False,
+                'tokens': {
+                    'access': str(refresh.access_token),
+                    'refresh': str(refresh),
+                },
+                'user': user_serializer.data
+            }, status=status.HTTP_201_CREATED)
 
 
 @extend_schema(tags=['Authentication'])

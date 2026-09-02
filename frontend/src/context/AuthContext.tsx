@@ -62,8 +62,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const register = async (data: Record<string, unknown>): Promise<RegisterResponse> => {
     const res = await authApi.register(data);
+    if (res.data.tokens?.access && res.data.user) {
+      localStorage.setItem('access_token', res.data.tokens.access);
+      localStorage.setItem('refresh_token', res.data.tokens.refresh);
+      localStorage.setItem('user', JSON.stringify(res.data.user));
+      setUser(res.data.user);
+    }
     return {
-      requires_verification: res.data.requires_verification ?? true,
+      requires_verification: res.data.requires_verification ?? false,
       email: res.data.email || (data.email as string),
       message: res.data.message,
       user: res.data.user,

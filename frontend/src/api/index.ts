@@ -25,7 +25,7 @@ import {
 
 export const authApi = {
   register: (data: Record<string, unknown>) =>
-    apiClient.post<{ status: string; message: string; requires_verification?: boolean; email?: string; user?: User }>('/auth/register/', data),
+    apiClient.post<{ status: string; message: string; requires_verification?: boolean; email?: string; tokens?: { access: string; refresh: string }; user?: User }>('/auth/register/', data),
   login: (data: { email: string; password: string }) =>
     apiClient.post<{ access: string; refresh: string; user: User }>('/auth/login/', data),
   verifyEmail: (data: { uid: string; token: string }) =>

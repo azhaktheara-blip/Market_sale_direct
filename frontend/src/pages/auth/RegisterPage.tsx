@@ -99,8 +99,16 @@ export const RegisterPage: React.FC = () => {
     try {
       setServerError(null);
       const res = await authRegister(data);
-      setRegisteredEmail(data.email);
-      setRegistrationComplete(true);
+      if (!res.requires_verification) {
+        if (res.user?.role === 'FARMER') {
+          navigate('/farmer/dashboard', { replace: true });
+        } else {
+          navigate('/products', { replace: true });
+        }
+      } else {
+        setRegisteredEmail(data.email);
+        setRegistrationComplete(true);
+      }
     } catch (err: any) {
       if (err.response?.data) {
         const data = err.response.data;

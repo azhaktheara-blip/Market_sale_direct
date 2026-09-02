@@ -95,6 +95,11 @@ class RegisterSerializer(serializers.ModelSerializer):
         business_type = validated_data.pop('business_type', CustomerProfile.BusinessType.INDIVIDUAL)
         password = validated_data.pop('password')
 
+        from django.conf import settings
+        verification_required = getattr(settings, 'EMAIL_VERIFICATION_REQUIRED', False)
+        if not verification_required:
+            validated_data['email_verified'] = True
+
         user = User.objects.create_user(password=password, **validated_data)
 
         if role == User.Role.FARMER:
@@ -122,14 +127,19 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         data = super().validate(attrs)
         user = self.user
 
-        # Gate login on email verification
+        # Gate login on email verification only when required
         if not user.is_staff and not user.is_superuser:
-            if not user.email_verified and getattr(user, 'auth_provider', 'EMAIL') == User.AuthProvider.EMAIL:
+            from django.conf import settings
+            verification_required = getattr(settings, 'EMAIL_VERIFICATION_REQUIRED', False)
+            if verification_required and not user.email_verified and getattr(user, 'auth_provider', 'EMAIL') == User.AuthProvider.EMAIL:
                 raise serializers.ValidationError({
                     'detail': 'Please verify your email address before logging in.',
                     'code': 'email_not_verified',
                     'email': user.email
                 })
+            elif not user.email_verified:
+                user.email_verified = True
+                user.save(update_fields=['email_verified'])
 
         user_data = {
             'id': str(user.id),
