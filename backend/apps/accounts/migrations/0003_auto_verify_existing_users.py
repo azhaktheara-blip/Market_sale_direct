@@ -1,14 +1,11 @@
 from django.db import migrations
 
-
 def verify_all_existing_users(apps, schema_editor):
     User = apps.get_model('accounts', 'User')
     User.objects.filter(email_verified=False).update(email_verified=True)
 
-
 def noop(apps, schema_editor):
     pass
-
 
 class Migration(migrations.Migration):
 
@@ -19,4 +16,3 @@ class Migration(migrations.Migration):
     operations = [
         migrations.RunPython(verify_all_existing_users, reverse_code=noop),
     ]
-

@@ -169,13 +169,16 @@ from django.utils import timezone
 
 @extend_schema(tags=['Orders & Checkout'])
 class OrderInvoicePDFView(APIView):
-    permission_classes = [permissions.AllowAny]
+    permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request, pk):
         try:
             order = Order.objects.select_related('farmer', 'customer', 'delivery').prefetch_related('items').get(pk=pk)
         except Order.DoesNotExist:
             return Response({'status': 'error', 'message': 'Order not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        if not (request.user.is_staff or request.user == order.customer or (hasattr(request.user, 'farmer_profile') and request.user.farmer_profile == order.farmer)):
+            return Response({'detail': 'You do not have permission to view this invoice.'}, status=status.HTTP_403_FORBIDDEN)
 
         pdf_buffer = OrderPDFService.generate_invoice_pdf(order)
         response = HttpResponse(pdf_buffer.getvalue(), content_type='application/pdf')
@@ -185,13 +188,16 @@ class OrderInvoicePDFView(APIView):
 
 @extend_schema(tags=['Orders & Checkout'])
 class OrderPackingSlipPDFView(APIView):
-    permission_classes = [permissions.AllowAny]
+    permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request, pk):
         try:
             order = Order.objects.select_related('farmer', 'customer', 'delivery').prefetch_related('items').get(pk=pk)
         except Order.DoesNotExist:
             return Response({'status': 'error', 'message': 'Order not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        if not (request.user.is_staff or request.user == order.customer or (hasattr(request.user, 'farmer_profile') and request.user.farmer_profile == order.farmer)):
+            return Response({'detail': 'You do not have permission to view this packing slip.'}, status=status.HTTP_403_FORBIDDEN)
 
         pdf_buffer = OrderPDFService.generate_packing_slip_pdf(order)
         response = HttpResponse(pdf_buffer.getvalue(), content_type='application/pdf')

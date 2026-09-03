@@ -44,10 +44,7 @@ class CashOnDeliveryGateway(BasePaymentGateway):
         }
 
     def verify_payment(self, payment: Payment, **kwargs) -> bool:
-        payment.status = Payment.Status.COMPLETED
-        payment.paid_at = timezone.now()
-        payment.save(update_fields=['status', 'paid_at'])
-        return True
+        return payment.status == Payment.Status.COMPLETED
 
     def refund_payment(self, payment: Payment, amount: Decimal = None, **kwargs) -> bool:
         payment.status = Payment.Status.REFUNDED
@@ -248,7 +245,18 @@ class StripeGateway(BasePaymentGateway):
     Stripe payment intent provider abstraction.
     """
     def create_payment(self, order: Order, **kwargs) -> dict:
-        tx_id = f"pi_mock_{uuid.uuid4().hex}"
+        import stripe
+        stripe.api_key = getattr(settings, 'STRIPE_SECRET_KEY', '')
+        
+        amount_cents = int(order.total * 100)
+        
+        intent = stripe.PaymentIntent.create(
+            amount=amount_cents,
+            currency='usd',
+            metadata={'order_id': order.id, 'order_number': order.order_number}
+        )
+        
+        tx_id = intent.id
         payment, _ = Payment.objects.update_or_create(
             order=order,
             defaults={
@@ -256,7 +264,7 @@ class StripeGateway(BasePaymentGateway):
                 'amount': order.total,
                 'status': Payment.Status.PENDING,
                 'transaction_id': tx_id,
-                'payment_gateway_response': {'client_secret': f"{tx_id}_secret_test"}
+                'payment_gateway_response': {'client_secret': intent.client_secret}
             }
         )
         return {
@@ -264,17 +272,31 @@ class StripeGateway(BasePaymentGateway):
             'payment_id': str(payment.id),
             'method': 'CREDIT_CARD',
             'amount': str(payment.amount),
-            'client_secret': f"{tx_id}_secret_test",
+            'client_secret': intent.client_secret,
             'transaction_id': payment.transaction_id
         }
 
     def verify_payment(self, payment: Payment, **kwargs) -> bool:
-        payment.status = Payment.Status.COMPLETED
-        payment.paid_at = timezone.now()
-        payment.save(update_fields=['status', 'paid_at'])
-        payment.order.payment_status = Order.PaymentStatus.PAID
-        payment.order.save(update_fields=['payment_status'])
-        return True
+        if payment.status == Payment.Status.COMPLETED:
+            return True
+
+        import stripe
+        stripe.api_key = getattr(settings, 'STRIPE_SECRET_KEY', '')
+
+        try:
+            intent = stripe.PaymentIntent.retrieve(payment.transaction_id)
+        except Exception:
+            return False
+
+        if intent.status == 'succeeded':
+            payment.status = Payment.Status.COMPLETED
+            payment.paid_at = timezone.now()
+            payment.save(update_fields=['status', 'paid_at'])
+            payment.order.payment_status = Order.PaymentStatus.PAID
+            payment.order.save(update_fields=['payment_status'])
+            return True
+
+        return False
 
     def refund_payment(self, payment: Payment, amount: Decimal = None, **kwargs) -> bool:
         payment.status = Payment.Status.REFUNDED

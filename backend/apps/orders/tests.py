@@ -122,3 +122,76 @@ class OrderAndInventoryAtomicTests(TestCase):
         order.refresh_from_db()
         self.assertEqual(order.status, Order.Status.CANCELLED)
 
+
+class OrderSecurityTests(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.category = Category.objects.create(name='Roots', slug='roots-sec')
+        
+        self.farmer_user = User.objects.create_user(email='farmsec@example.com', password='password123', role='FARMER')
+        self.farmer_profile = FarmerProfile.objects.create(
+            user=self.farmer_user, farm_name='Security Farm', province='Siem Reap', is_verified=True
+        )
+        self.product = Product.objects.create(
+            farmer=self.farmer_profile, category=self.category, name='Security Carrots',
+            price=Decimal('2.00'), unit='KG', minimum_order_qty=Decimal('1.00'),
+            harvest_date=timezone.now().date(), status=Product.Status.ACTIVE
+        )
+        Inventory.objects.create(product=self.product, available_quantity=Decimal('20.00'))
+
+        self.customer = User.objects.create_user(email='buyersec@example.com', password='password123', role='CUSTOMER')
+        self.other_customer = User.objects.create_user(email='otherbuyer@example.com', password='password123', role='CUSTOMER')
+        self.admin = User.objects.create_superuser(email='admin@example.com', password='password123')
+
+        self.address = Address.objects.create(
+            user=self.customer, label='Home', recipient_name='Buyer Dara',
+            phone_number='+85512345678', province='Siem Reap', district='Siem Reap',
+            street_address='St 08'
+        )
+
+        # Create order
+        cart, _ = Cart.objects.get_or_create(user=self.customer)
+        CartItem.objects.create(cart=cart, product=self.product, quantity=Decimal('5.00'))
+        orders = OrderService.checkout(self.customer, self.address.id)
+        self.order = orders[0]
+
+    def test_invoice_idor_prevention(self):
+        url = f'/api/v1/orders/{self.order.id}/invoice/'
+
+        # Anonymous -> 401
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+        # Other customer -> 403
+        self.client.force_authenticate(user=self.other_customer)
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+        # Owning customer -> 200
+        self.client.force_authenticate(user=self.customer)
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        # Fulfilling farmer -> 200
+        self.client.force_authenticate(user=self.farmer_user)
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        # Admin -> 200
+        self.client.force_authenticate(user=self.admin)
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_packing_slip_idor_prevention(self):
+        url = f'/api/v1/orders/{self.order.id}/packing-slip/'
+
+        # Other customer -> 403
+        self.client.force_authenticate(user=self.other_customer)
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+        # Owning customer -> 200
+        self.client.force_authenticate(user=self.customer)
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+

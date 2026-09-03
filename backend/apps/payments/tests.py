@@ -72,3 +72,84 @@ class PaymentSecurityTests(TestCase):
         sig = client.get_hash(raw_str)
         self.assertTrue(len(sig) > 20)
 
+from django.test import TestCase
+from django.contrib.auth import get_user_model
+from rest_framework.test import APIClient
+from rest_framework import status
+from decimal import Decimal
+from django.utils import timezone
+from apps.accounts.models import Address
+from apps.farmers.models import FarmerProfile
+from apps.products.models import Category, Product, Inventory
+from apps.cart.models import Cart, CartItem
+from apps.orders.services import OrderService
+from apps.orders.models import Order
+from apps.payments.models import Payment
+
+User = get_user_model()
+
+class PaymentSecurityTests(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.category = Category.objects.create(name='Roots', slug='roots-pay')
+        
+        self.farmer_user = User.objects.create_user(email='farmpay@example.com', password='password123', role='FARMER')
+        self.farmer_profile = FarmerProfile.objects.create(
+            user=self.farmer_user, farm_name='Pay Farm', province='Siem Reap', is_verified=True
+        )
+        self.product = Product.objects.create(
+            farmer=self.farmer_profile, category=self.category, name='Pay Carrots',
+            price=Decimal('2.00'), unit='KG', minimum_order_qty=Decimal('1.00'),
+            harvest_date=timezone.now().date(), status=Product.Status.ACTIVE
+        )
+        Inventory.objects.create(product=self.product, available_quantity=Decimal('20.00'))
+
+        self.customer = User.objects.create_user(email='buyerpay@example.com', password='password123', role='CUSTOMER')
+        self.address = Address.objects.create(
+            user=self.customer, label='Home', recipient_name='Buyer Dara',
+            phone_number='+85512345678', province='Siem Reap', district='Siem Reap',
+            street_address='St 08'
+        )
+
+        cart, _ = Cart.objects.get_or_create(user=self.customer)
+        CartItem.objects.create(cart=cart, product=self.product, quantity=Decimal('5.00'))
+        orders = OrderService.checkout(self.customer, self.address.id)
+        self.order = orders[0]
+
+    def test_cod_does_not_autocomplete_on_verify(self):
+        # Create a COD payment manually since checkout created it via signal
+        payment, _ = Payment.objects.get_or_create(
+            order=self.order,
+            defaults={'payment_method': Order.PaymentMethod.COD, 'amount': self.order.total, 'status': Payment.Status.PENDING}
+        )
+
+        self.client.force_authenticate(user=self.customer)
+        response = self.client.post(f'/api/v1/payments/{self.order.id}/verify/')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        
+        # Payment should still be pending
+        payment.refresh_from_db()
+        self.assertEqual(payment.status, Payment.Status.PENDING)
+        
+        # Calling verify should return success=pending
+        self.assertEqual(response.data['status'], 'pending')
+
+
+    def test_stripe_credit_card_does_not_autocomplete_without_real_intent(self):
+        payment, _ = Payment.objects.get_or_create(
+            order=self.order,
+            defaults={
+                'payment_method': Order.PaymentMethod.CREDIT_CARD,
+                'amount': self.order.total,
+                'status': Payment.Status.PENDING,
+                'transaction_id': 'pi_mock_123'
+            }
+        )
+
+        self.client.force_authenticate(user=self.customer)
+        response = self.client.post(f'/api/v1/payments/{self.order.id}/verify/')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        payment.refresh_from_db()
+        self.assertEqual(payment.status, Payment.Status.PENDING)
+        self.assertEqual(response.data['status'], 'pending')
