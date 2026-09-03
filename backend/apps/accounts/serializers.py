@@ -53,15 +53,16 @@ class RegisterSerializer(serializers.ModelSerializer):
     bio = serializers.CharField(required=False, allow_blank=True)
 
     # Extra fields for business customers
-    business_name = serializers.CharField(required=False, allow_blank=True)
-    business_type = serializers.CharField(required=False, allow_blank=True)
+    business_name = serializers.CharField(max_length=150, required=False, allow_blank=True)
+    business_type = serializers.ChoiceField(choices=CustomerProfile.BusinessType.choices, required=False)
+    profile_image = serializers.ImageField(required=False, allow_null=True)
 
     class Meta:
         model = User
         fields = [
             'id', 'email', 'username', 'password', 'phone_number', 'role',
             'farm_name', 'province', 'district', 'farming_practice', 'bio',
-            'business_name', 'business_type'
+            'business_name', 'business_type', 'profile_image'
         ]
 
     def validate_password(self, value):
@@ -93,6 +94,7 @@ class RegisterSerializer(serializers.ModelSerializer):
         bio = validated_data.pop('bio', '')
         business_name = validated_data.pop('business_name', '')
         business_type = validated_data.pop('business_type', CustomerProfile.BusinessType.INDIVIDUAL)
+        profile_image = validated_data.pop('profile_image', None)
         password = validated_data.pop('password')
 
         from django.conf import settings
@@ -103,7 +105,7 @@ class RegisterSerializer(serializers.ModelSerializer):
         user = User.objects.create_user(password=password, **validated_data)
 
         if role == User.Role.FARMER:
-            FarmerProfile.objects.create(
+            profile = FarmerProfile.objects.create(
                 user=user,
                 farm_name=farm_name,
                 province=province,
@@ -112,12 +114,18 @@ class RegisterSerializer(serializers.ModelSerializer):
                 bio=bio or f"Fresh natural produce straight from {farm_name}.",
                 story=f"Welcome to {farm_name}. We take pride in cultivating healthy, clean, and sustainable agricultural products directly for our community."
             )
+            if profile_image:
+                profile.profile_image = profile_image
+                profile.save()
         else:
-            CustomerProfile.objects.create(
+            profile = CustomerProfile.objects.create(
                 user=user,
                 business_name=business_name,
                 business_type=business_type or CustomerProfile.BusinessType.INDIVIDUAL
             )
+            if profile_image:
+                profile.profile_image = profile_image
+                profile.save()
 
         return user
 

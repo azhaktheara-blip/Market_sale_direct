@@ -24,8 +24,10 @@ import {
 } from '../types';
 
 export const authApi = {
-  register: (data: Record<string, unknown>) =>
-    apiClient.post<{ status: string; message: string; requires_verification?: boolean; email?: string; tokens?: { access: string; refresh: string }; user?: User }>('/auth/register/', data),
+  register: (data: Record<string, unknown> | FormData) =>
+    apiClient.post<{ status: string; message: string; requires_verification?: boolean; email?: string; tokens?: { access: string; refresh: string }; user?: User }>('/auth/register/', data, {
+      headers: data instanceof FormData ? { 'Content-Type': 'multipart/form-data' } : undefined,
+    }),
   login: (data: { email: string; password: string }) =>
     apiClient.post<{ access: string; refresh: string; user: User }>('/auth/login/', data),
   verifyEmail: (data: { uid: string; token: string }) =>

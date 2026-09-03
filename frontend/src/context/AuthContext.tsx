@@ -14,7 +14,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<User>;
-  register: (data: Record<string, unknown>) => Promise<RegisterResponse>;
+  register: (data: Record<string, unknown> | FormData) => Promise<RegisterResponse>;
   googleLogin: (idToken: string) => Promise<User>;
   verifyEmail: (uid: string, token: string) => Promise<User>;
   resendVerification: (email: string) => Promise<{ status: string; message: string }>;
@@ -60,7 +60,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return res.data.user;
   };
 
-  const register = async (data: Record<string, unknown>): Promise<RegisterResponse> => {
+  const register = async (data: Record<string, unknown> | FormData): Promise<RegisterResponse> => {
     const res = await authApi.register(data);
     if (res.data.tokens?.access && res.data.user) {
       localStorage.setItem('access_token', res.data.tokens.access);
@@ -70,7 +70,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
     return {
       requires_verification: res.data.requires_verification ?? false,
-      email: res.data.email || (data.email as string),
+      email: res.data.email || (data instanceof FormData ? data.get('email') as string : data.email as string),
       message: res.data.message,
       user: res.data.user,
     };

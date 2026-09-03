@@ -53,6 +53,7 @@ export const RegisterPage: React.FC = () => {
   const [registeredEmail, setRegisteredEmail] = useState<string>('');
   const [isResending, setIsResending] = useState<boolean>(false);
   const [resendSuccess, setResendSuccess] = useState<boolean>(false);
+  const [profileImage, setProfileImage] = useState<File | null>(null);
 
   const hasGoogleClientId = Boolean((import.meta as any).env?.VITE_GOOGLE_CLIENT_ID);
 
@@ -98,7 +99,20 @@ export const RegisterPage: React.FC = () => {
   const onSubmit = async (data: RegisterFormData) => {
     try {
       setServerError(null);
-      const res = await authRegister(data);
+      let submitData: Record<string, unknown> | FormData = data;
+      
+      if (profileImage) {
+        const formData = new FormData();
+        Object.entries(data).forEach(([key, value]) => {
+          if (value !== undefined && value !== null) {
+            formData.append(key, String(value));
+          }
+        });
+        formData.append('profile_image', profileImage);
+        submitData = formData;
+      }
+
+      const res = await authRegister(submitData);
       if (!res.requires_verification) {
         if (res.user?.role === 'FARMER') {
           navigate('/farmer/dashboard', { replace: true });
@@ -308,6 +322,18 @@ export const RegisterPage: React.FC = () => {
             error={errors.password?.message}
             {...register('password')}
           />
+
+          <div>
+            <label className="block text-xs font-semibold text-stone-700 mb-1.5 uppercase tracking-wider">
+              Profile Image (Optional)
+            </label>
+            <input
+              type="file"
+              accept="image/*"
+              onChange={(e) => setProfileImage(e.target.files?.[0] || null)}
+              className="w-full bg-white border border-stone-300 rounded-xl px-3.5 py-2 text-xs text-stone-900 file:mr-4 file:py-1 file:px-3 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-stone-50 file:text-stone-700 hover:file:bg-stone-100"
+            />
+          </div>
 
           {/* Conditional Farmer Fields */}
           {selectedRole === 'FARMER' && (

@@ -75,6 +75,7 @@ class CustomerProfile(TimeStampedModel):
         OTHER = 'OTHER', 'Other Organization'
 
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='customer_profile')
+    profile_image = models.ImageField(upload_to='customers/profiles/', blank=True, null=True)
     business_name = models.CharField(max_length=200, blank=True)
     business_type = models.CharField(max_length=30, choices=BusinessType.choices, default=BusinessType.INDIVIDUAL)
     delivery_instructions = models.TextField(blank=True)
