@@ -19,3 +19,4 @@ class Migration(migrations.Migration):
     operations = [
         migrations.RunPython(verify_all_existing_users, reverse_code=noop),
     ]
+

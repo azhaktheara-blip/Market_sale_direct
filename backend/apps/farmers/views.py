@@ -28,15 +28,14 @@ class FarmerListView(generics.ListAPIView):
 
     def get_queryset(self):
         return FarmerProfile.objects.all()\
-            .select_related('user')\
-            .prefetch_related('certifications')
+            .select_related('user')
 
 
 @extend_schema(tags=['Farmers (Public)'])
 class FarmerDetailView(generics.RetrieveAPIView):
     queryset = FarmerProfile.objects.all()\
         .select_related('user')\
-        .prefetch_related('certifications', 'products', 'products__images')
+        .prefetch_related('products', 'products__images')
     serializer_class = FarmerPublicDetailSerializer
     permission_classes = [permissions.AllowAny]
     lookup_field = 'slug'
