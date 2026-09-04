@@ -6,6 +6,10 @@ interface CartContextType {
   cart: Cart | null;
   isLoading: boolean;
   totalItems: number;
+  isCartOpen: boolean;
+  setIsCartOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  openCart: () => void;
+  closeCart: () => void;
   refreshCart: () => Promise<void>;
   addToCart: (productId: string, quantity: number | string) => Promise<{ success: boolean; message?: string }>;
   updateQuantity: (itemId: string, quantity: number | string) => Promise<void>;
@@ -18,6 +22,10 @@ const CartContext = createContext<CartContextType | undefined>(undefined);
 export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [cart, setCart] = useState<Cart | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isCartOpen, setIsCartOpen] = useState<boolean>(false);
+
+  const openCart = () => setIsCartOpen(true);
+  const closeCart = () => setIsCartOpen(false);
 
   const refreshCart = async () => {
     try {
@@ -39,6 +47,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const res = await cartApi.addItem(productId, quantity);
       await refreshCart();
+      setIsCartOpen(true);
       return { success: true, message: res.data.message };
     } catch (err: any) {
       await refreshCart();
@@ -73,6 +82,10 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         cart,
         isLoading,
         totalItems,
+        isCartOpen,
+        setIsCartOpen,
+        openCart,
+        closeCart,
         refreshCart,
         addToCart,
         updateQuantity,

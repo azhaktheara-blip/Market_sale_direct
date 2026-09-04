@@ -24,7 +24,7 @@ import { motion } from 'framer-motion';
 
 export const Navbar: React.FC = () => {
   const { user, isAuthenticated, logout } = useAuth();
-  const { totalItems } = useCart();
+  const { totalItems, openCart } = useCart();
   const { t } = useLanguage();
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -116,10 +116,12 @@ export const Navbar: React.FC = () => {
             )}
 
             {/* Cart Button */}
-            <Link
-              to="/customer/cart"
+            <button
+              type="button"
+              onClick={openCart}
               className="relative p-2 text-stone-700 hover:text-forest-700 hover:bg-forest-50 rounded-full transition-colors group"
               title="View Cart"
+              aria-label="Open Shopping Cart"
             >
               <ShoppingCart className="w-5 h-5 group-hover:scale-105 transition-transform" />
               {totalItems > 0 && (
@@ -133,7 +135,7 @@ export const Navbar: React.FC = () => {
                   {totalItems > 99 ? '99+' : totalItems}
                 </motion.span>
               )}
-            </Link>
+            </button>
 
             {/* Auth / Profile Area */}
             {isAuthenticated && user ? (

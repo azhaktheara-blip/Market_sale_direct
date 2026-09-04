@@ -5,7 +5,7 @@ import { useCart } from '../../context/CartContext';
 import { useAuth } from '../../context/AuthContext';
 
 export const MobileBottomNav: React.FC = () => {
-  const { cart } = useCart();
+  const { cart, openCart } = useCart();
   const { user, isAuthenticated } = useAuth();
 
   const totalItems = cart?.total_items || 0;
@@ -56,13 +56,11 @@ export const MobileBottomNav: React.FC = () => {
         <span className="text-[10px]">Farm Map</span>
       </NavLink>
 
-      <NavLink
-        to="/cart"
-        className={({ isActive }) =>
-          `flex flex-col items-center justify-center py-1 px-3 rounded-xl transition-all relative ${
-            isActive ? 'text-forest-700 font-bold' : 'text-stone-500 hover:text-stone-900'
-          }`
-        }
+      <button
+        type="button"
+        onClick={openCart}
+        className="flex flex-col items-center justify-center py-1 px-3 rounded-xl transition-all relative text-stone-500 hover:text-stone-900"
+        aria-label="Open Cart"
       >
         <div className="relative">
           <ShoppingBag className="w-5 h-5 mb-0.5" />
@@ -73,7 +71,7 @@ export const MobileBottomNav: React.FC = () => {
           )}
         </div>
         <span className="text-[10px]">Cart</span>
-      </NavLink>
+      </button>
 
       <NavLink
         to={profileLink}

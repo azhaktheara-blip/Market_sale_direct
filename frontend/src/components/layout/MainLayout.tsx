@@ -3,6 +3,7 @@ import { Outlet } from 'react-router-dom';
 import { Navbar } from './Navbar';
 import { Footer } from './Footer';
 import { MobileBottomNav } from './MobileBottomNav';
+import { CartDrawer } from '../cart/CartDrawer';
 
 export const MainLayout: React.FC = () => {
   return (
@@ -13,6 +14,7 @@ export const MainLayout: React.FC = () => {
       </main>
       <Footer />
       <MobileBottomNav />
+      <CartDrawer />
     </div>
   );
 };

@@ -77,15 +77,19 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, priority = 'a
         />
 
         {/* Badges Overlay */}
-        <div className="absolute top-3 left-3 flex flex-col gap-1.5 z-10">
+        <div className="absolute top-2.5 left-2.5 sm:top-3 sm:left-3 flex flex-col gap-1.5 z-10">
+          {product.status === 'OUT_OF_STOCK' ? (
+            <Badge variant="danger" size="sm">
+              {t('card.out_of_stock')}
+            </Badge>
+          ) : (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-600/90 text-white text-[9px] sm:text-[10px] font-bold shadow-xs backdrop-blur-xs">
+              In Stock
+            </span>
+          )}
           {product.is_organic && (
             <Badge variant="organic" size="sm">
               {t('card.organic')}
-            </Badge>
-          )}
-          {product.status === 'OUT_OF_STOCK' && (
-            <Badge variant="danger" size="sm">
-              {t('card.out_of_stock')}
             </Badge>
           )}
         </div>
@@ -94,29 +98,56 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, priority = 'a
         {isAuthenticated && (
           <button
             onClick={handleToggleFavorite}
-            className="absolute top-3 right-3 p-2 rounded-full bg-white/90 backdrop-blur-sm shadow-sm text-stone-400 hover:text-rose-500 hover:bg-white transition-colors z-10"
+            className="absolute top-2.5 right-2.5 sm:top-3 sm:right-3 p-1.5 sm:p-2 rounded-full bg-white/90 backdrop-blur-sm shadow-sm text-stone-400 hover:text-rose-500 hover:bg-white transition-colors z-10"
             title="Save to favorites"
           >
-            <Heart className={`w-4 h-4 ${isFav ? 'fill-rose-500 text-rose-500' : ''}`} />
+            <Heart className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${isFav ? 'fill-rose-500 text-rose-500' : ''}`} />
           </button>
+        )}
+
+        {/* Desktop "Quick Add" Overlay */}
+        {product.status !== 'OUT_OF_STOCK' && (
+          <div className="hidden md:flex absolute inset-x-3 bottom-3 z-20 items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 translate-y-2 group-hover:translate-y-0 pointer-events-none">
+            <motion.button
+              type="button"
+              whileTap={{ scale: 0.95 }}
+              onClick={handleAddToCart}
+              disabled={isAdding}
+              className="pointer-events-auto w-full py-2.5 px-3 rounded-2xl bg-forest-900/95 hover:bg-forest-800 text-white text-xs font-black shadow-lg shadow-stone-900/20 backdrop-blur-md flex items-center justify-center gap-1.5 transition-colors border border-forest-700/50"
+            >
+              {isAdding ? (
+                <span className="text-[11px] animate-pulse">Adding...</span>
+              ) : isAdded ? (
+                <>
+                  <Check className="w-3.5 h-3.5 stroke-[3] text-emerald-400" />
+                  <span className="text-emerald-300">Added!</span>
+                </>
+              ) : (
+                <>
+                  <ShoppingCart className="w-3.5 h-3.5" />
+                  <span>Quick Add</span>
+                </>
+              )}
+            </motion.button>
+          </div>
         )}
       </Link>
 
       {/* Card Body */}
-      <div className="p-4 sm:p-5 flex-1 flex flex-col justify-between space-y-3">
+      <div className="p-3.5 sm:p-5 flex-1 flex flex-col justify-between space-y-2.5 sm:space-y-3">
         <div>
           {/* Farmer & Location Attribution */}
-          <div className="flex items-center justify-between gap-2 mb-1.5 text-xs">
+          <div className="flex items-center justify-between gap-1.5 mb-1 text-[11px] sm:text-xs">
             <Link
               to={`/farmers/${product.farmer.slug}`}
               className="font-semibold text-stone-600 hover:text-forest-800 truncate inline-flex items-center gap-1 group/farmer"
             >
               <span className="truncate">{product.farmer.farm_name}</span>
               {product.farmer.is_verified && (
-                <ShieldCheck className="w-3.5 h-3.5 text-teal-600 shrink-0" />
+                <ShieldCheck className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-teal-600 shrink-0" />
               )}
             </Link>
-            <span className="text-stone-400 shrink-0 text-[11px] flex items-center gap-0.5">
+            <span className="text-stone-400 shrink-0 text-[10px] sm:text-[11px] flex items-center gap-0.5">
               <MapPin className="w-2.5 h-2.5" />
               {product.farmer.province}
             </span>
@@ -124,71 +155,72 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, priority = 'a
 
           {/* Bold Product Title */}
           <Link to={`/products/${product.slug}`} className="block">
-            <h3 className="text-base font-extrabold text-stone-900 group-hover:text-forest-700 transition-colors line-clamp-1 leading-snug">
+            <h3 className="text-sm sm:text-base font-extrabold text-stone-900 group-hover:text-forest-700 transition-colors line-clamp-1 leading-snug">
               {product.name}
             </h3>
           </Link>
 
-          {/* Rating or New Harvest Badge */}
-          <div className="mt-2 flex items-center justify-between gap-2">
+          {/* Star-Rating Row Above Price */}
+          <div className="mt-1.5 sm:mt-2 flex items-center justify-between gap-2">
             {hasReviews ? (
               <StarRating rating={product.rating_avg} count={product.rating_count} size="sm" />
             ) : (
-              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-800 text-[10px] font-bold border border-emerald-200/80">
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-800 text-[9px] sm:text-[10px] font-bold border border-emerald-200/80">
                 <Sparkles className="w-2.5 h-2.5 text-emerald-600" /> {t('card.new_harvest')}
               </span>
             )}
-            <span className="text-[10px] text-stone-400 font-medium">
-              {t('card.harvest_date')} {product.harvest_date}
+            <span className="text-[9px] sm:text-[10px] text-stone-400 font-medium">
+              {product.harvest_date ? `${t('card.harvest_date')} ${product.harvest_date}` : ''}
             </span>
           </div>
         </div>
 
         {/* Footer: Price & Add to Cart */}
-        <div className="pt-3 border-t border-stone-100 flex items-center justify-between gap-2">
-          <div>
-            <div className="flex items-baseline gap-1">
-              <span className="text-xl font-black text-stone-900 font-display">
+        <div className="pt-2.5 sm:pt-3 border-t border-stone-100 flex items-center justify-between gap-1.5 sm:gap-2">
+          <div className="min-w-0">
+            <div className="flex items-baseline gap-0.5 sm:gap-1">
+              <span className="text-base sm:text-xl font-black text-stone-900 font-display">
                 ${parseFloat(product.price).toFixed(2)}
               </span>
-              <span className="text-xs text-stone-500 font-semibold lowercase">/ {product.unit}</span>
+              <span className="text-[10px] sm:text-xs text-stone-500 font-semibold lowercase truncate">/ {product.unit}</span>
             </div>
             {parseFloat(product.minimum_order_qty) > 1 && (
-              <span className="text-[10px] text-stone-400 block font-medium">
+              <span className="text-[9px] sm:text-[10px] text-stone-400 block font-medium truncate">
                 {t('card.min')} {product.minimum_order_qty} {product.unit}
               </span>
             )}
           </div>
 
           <motion.button
-            whileTap={{ scale: 0.95 }}
+            whileTap={{ scale: 0.92 }}
             onClick={handleAddToCart}
             disabled={isAdding || product.status === 'OUT_OF_STOCK'}
-            className={`px-3.5 py-2 rounded-2xl text-xs font-bold flex items-center gap-1.5 transition-colors duration-200 ${
+            className={`shrink-0 px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-xl sm:rounded-2xl text-[11px] sm:text-xs font-bold flex items-center gap-1 sm:gap-1.5 transition-all duration-200 ${
               errorMsg
                 ? 'bg-rose-50 text-rose-700 border border-rose-200'
                 : isAdded
-                ? 'bg-emerald-600 text-white shadow-xs'
+                ? 'bg-emerald-600 text-white shadow-sm ring-2 ring-emerald-400/40'
                 : existingInCart
                 ? 'bg-forest-100 hover:bg-forest-600 text-forest-800 hover:text-white border border-forest-300'
-                : 'bg-forest-50 hover:bg-forest-600 text-forest-800 hover:text-white border border-forest-200'
+                : 'bg-forest-50 hover:bg-forest-600 text-forest-800 hover:text-white border border-forest-200 shadow-2xs'
             } disabled:opacity-40 disabled:cursor-not-allowed`}
           >
             {errorMsg ? (
-              <span className="text-[10px] truncate max-w-[100px]">{errorMsg}</span>
+              <span className="text-[9px] sm:text-[10px] truncate max-w-[70px] sm:max-w-[100px]">{errorMsg}</span>
             ) : isAdded ? (
               <>
                 <Check className="w-3.5 h-3.5 stroke-[3]" />
-                <span>{t('card.added')}</span>
+                <span className="hidden xs:inline sm:inline">Added!</span>
               </>
             ) : existingInCart ? (
               <>
-                <ShoppingCart className="w-3.5 h-3.5" />
-                <span>{t('card.in_cart')} ({existingInCart.quantity})</span>
+                <ShoppingCart className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+                <span className="hidden xs:inline sm:inline">{t('card.in_cart')}</span>
+                <span className="font-mono">({existingInCart.quantity})</span>
               </>
             ) : (
               <>
-                <ShoppingCart className="w-3.5 h-3.5" />
+                <ShoppingCart className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
                 <span>{t('card.add')}</span>
               </>
             )}

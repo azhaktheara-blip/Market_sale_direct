@@ -10,7 +10,10 @@ export const Skeleton: React.FC<SkeletonProps> = ({ className }) => {
   return (
     <div
       className={twMerge(
-        clsx('animate-pulse rounded-xl bg-stone-200/80', className)
+        clsx(
+          'relative overflow-hidden rounded-xl bg-stone-200/70 after:absolute after:inset-0 after:-translate-x-full after:animate-[shimmer_1.5s_infinite] after:bg-gradient-to-r after:from-transparent after:via-white/50 after:to-transparent',
+          className
+        )
       )}
     />
   );
@@ -18,17 +21,22 @@ export const Skeleton: React.FC<SkeletonProps> = ({ className }) => {
 
 export const ProductCardSkeleton: React.FC = () => {
   return (
-    <div className="bg-white rounded-2xl p-4 border border-stone-200 shadow-sm flex flex-col">
-      <Skeleton className="w-full aspect-[4/3] rounded-xl mb-4" />
-      <div className="flex items-center gap-2 mb-2">
-        <Skeleton className="w-16 h-5 rounded-full" />
-        <Skeleton className="w-20 h-5 rounded-full" />
+    <div className="bg-white rounded-3xl p-3.5 sm:p-5 border border-stone-200/80 shadow-soft flex flex-col justify-between overflow-hidden">
+      <div>
+        <Skeleton className="w-full aspect-[4/3] rounded-2xl mb-3" />
+        <div className="flex items-center justify-between gap-2 mb-2">
+          <Skeleton className="w-24 h-3.5 rounded-md" />
+          <Skeleton className="w-14 h-3.5 rounded-md" />
+        </div>
+        <Skeleton className="w-3/4 h-5 rounded-md mb-2.5" />
+        <div className="flex items-center justify-between">
+          <Skeleton className="w-20 h-4 rounded-full" />
+          <Skeleton className="w-16 h-3.5 rounded-md" />
+        </div>
       </div>
-      <Skeleton className="w-3/4 h-5 mb-2" />
-      <Skeleton className="w-1/2 h-4 mb-4" />
-      <div className="mt-auto pt-3 border-t border-stone-100 flex items-center justify-between">
-        <Skeleton className="w-20 h-6" />
-        <Skeleton className="w-24 h-9 rounded-xl" />
+      <div className="pt-3 mt-4 border-t border-stone-100 flex items-center justify-between gap-2">
+        <Skeleton className="w-16 h-6 rounded-md" />
+        <Skeleton className="w-20 h-8 rounded-xl sm:rounded-2xl" />
       </div>
     </div>
   );

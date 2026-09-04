@@ -98,7 +98,38 @@ export const ProductDetailPage: React.FC = () => {
   const isOut = product.status === 'OUT_OF_STOCK';
 
   // Check if item is already in current cart
-  const existingCartItem = cart?.items?.find((it) => it.product?.id === product.id);
+  const existingCartItem = cart?.items?.find((i) => i.product.id === product.id);
+  const currentCartQty = existingCartItem ? parseFloat(existingCartItem.quantity) : 0;
+
+  const handleIncrement = () => setQuantity((q) => q + 1);
+  const handleDecrement = () => setQuantity((q) => (q > minQty ? q - 1 : minQty));
+
+  const jsonLd = {
+    "@context": "https://schema.org/",
+    "@type": "Product",
+    "name": product.name,
+    "image": product.primary_image,
+    "description": product.description,
+    "sku": product.id,
+    "brand": {
+      "@type": "Brand",
+      "name": product.farmer?.farm_name || "FarmerDirect"
+    },
+    "offers": {
+      "@type": "AggregateOffer",
+      "priceCurrency": "USD",
+      "lowPrice": product.price,
+      "highPrice": product.price,
+      "offerCount": "1",
+      "availability": product.status === "OUT_OF_STOCK" ? "https://schema.org/OutOfStock" : "https://schema.org/InStock",
+      "itemCondition": "https://schema.org/NewCondition"
+    },
+    "aggregateRating": parseFloat(product.rating_avg) > 0 ? {
+      "@type": "AggregateRating",
+      "ratingValue": product.rating_avg,
+      "reviewCount": product.rating_count
+    } : undefined
+  };
 
   // Calculate volume tiered price
   let unitPrice = parseFloat(product.price);
@@ -139,6 +170,7 @@ export const ProductDetailPage: React.FC = () => {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 space-y-12">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       {/* Breadcrumb */}
       <nav className="flex items-center gap-2 text-xs text-stone-400">
         <Link to="/" className="hover:text-forest-700">Home</Link>
