@@ -27,6 +27,16 @@ export const HomePage: React.FC = () => {
   const navigate = useNavigate();
   const { t } = useLanguage();
   const [searchInput, setSearchInput] = React.useState('');
+  const [showMobileCTA, setShowMobileCTA] = React.useState(false);
+
+  React.useEffect(() => {
+    const handleScroll = () => {
+      // Show when scrolled past 400px (approx hero section on mobile)
+      setShowMobileCTA(window.scrollY > 400);
+    };
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   const { data: categoriesData } = useQuery({
     queryKey: ['categories'],
@@ -77,67 +87,28 @@ export const HomePage: React.FC = () => {
                 className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-forest-100/90 border border-forest-200 text-forest-800 text-xs font-bold uppercase tracking-wider shadow-xs"
               >
                 <Sprout className="w-4 h-4 text-forest-600" />
-                <span>{t('hero.badge')}</span>
+                <span>100% Farm-Direct Produce</span>
               </motion.div>
 
               <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black text-stone-900 leading-[1.08] font-display tracking-tight">
-                {t('hero.title_1')} <br />
-                <span className="text-forest-600">{t('hero.title_2')}</span>
+                Eat Healthier With <br className="hidden sm:block" />
+                <span className="text-forest-600">Fresh Local Harvests</span>
               </h1>
 
               <p className="text-base sm:text-lg text-stone-600 max-w-xl mx-auto lg:mx-0 leading-relaxed font-normal">
-                {t('hero.subtitle')}
+                Skip the supermarket. Get organic vegetables, exotic fruits, and fresh dairy delivered straight from independent Cambodian farmers to your door within 24 hours of harvest.
               </p>
 
-              {/* Single Central Hero Search Bar */}
-              <div className="max-w-xl mx-auto lg:mx-0 pt-2 space-y-3">
-                <form onSubmit={handleHeroSearch}>
-                  <div className="flex items-center bg-white rounded-2xl p-2 border border-stone-300 shadow-soft focus-within:border-forest-600 focus-within:ring-2 focus-within:ring-forest-100 transition-all">
-                    <Search className="w-5 h-5 text-stone-400 ml-3 shrink-0" />
-                    <input
-                      type="text"
-                      placeholder={t('hero.search_placeholder')}
-                      value={searchInput}
-                      onChange={(e) => setSearchInput(e.target.value)}
-                      className="w-full px-3 py-2 text-sm text-stone-900 placeholder:text-stone-400 focus:outline-none bg-transparent"
-                    />
-                    <Button type="submit" variant="primary" size="md" className="shrink-0 rounded-xl font-bold">
-                      {t('hero.search_btn')}
-                    </Button>
-                  </div>
-                </form>
-
-                {/* Popular Produce Suggestion Chips */}
-                <div className="flex flex-wrap items-center gap-1.5 justify-center lg:justify-start">
-                  <span className="text-[11px] font-bold text-stone-400 uppercase tracking-wider mr-1">
-                    {t('hero.popular')}
-                  </span>
-                  {quickChips.map((chip) => (
-                    <button
-                      key={chip.query}
-                      type="button"
-                      onClick={() => handleQuickSearch(chip.query)}
-                      className="text-xs px-2.5 py-1 rounded-lg bg-white hover:bg-forest-50 text-stone-700 hover:text-forest-800 border border-stone-200 hover:border-forest-200 transition-all shadow-2xs font-medium"
-                    >
-                      {chip.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Value Props Pills */}
-              <div className="pt-4 flex flex-wrap items-center justify-center lg:justify-start gap-5 text-xs font-semibold text-stone-600">
-                <div className="flex items-center gap-1.5">
-                  <CheckCircle2 className="w-4 h-4 text-forest-600" />
-                  <span>{t('hero.prop_1')}</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <CheckCircle2 className="w-4 h-4 text-forest-600" />
-                  <span>{t('hero.prop_2')}</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <CheckCircle2 className="w-4 h-4 text-forest-600" />
-                  <span>{t('hero.prop_3')}</span>
+              <div className="pt-4 flex flex-col items-center lg:items-start gap-3">
+                <Link to="/products" className="w-full sm:w-auto">
+                  <Button variant="primary" size="lg" className="w-full sm:w-auto text-lg px-8 py-4 font-black shadow-lg shadow-forest-600/20 hover:shadow-forest-600/40 rounded-2xl transform hover:-translate-y-0.5 transition-all">
+                    Get Fresh Produce Now
+                    <ArrowRight className="ml-2 w-5 h-5" />
+                  </Button>
+                </Link>
+                <div className="flex items-center justify-center lg:justify-start gap-4 text-xs font-bold text-stone-500">
+                  <span className="flex items-center gap-1"><CheckCircle2 className="w-3.5 h-3.5 text-forest-500" /> Free Shipping Available</span>
+                  <span className="flex items-center gap-1"><ShieldCheck className="w-3.5 h-3.5 text-forest-500" /> 100% Fresh Guarantee</span>
                 </div>
               </div>
             </div>
@@ -213,6 +184,97 @@ export const HomePage: React.FC = () => {
             <p className="text-3xl sm:text-4xl font-extrabold text-forest-700 font-display">99.4%</p>
             <p className="text-xs font-bold text-stone-900 mt-1">Delivery Success</p>
             <p className="text-[11px] text-stone-500">Escrow Protected Payouts</p>
+          </div>
+        </div>
+      </section>
+
+      {/* WHY CHOOSE US - BENEFITS SECTION */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
+        <div className="text-center mb-10 sm:mb-14">
+          <h2 className="text-3xl sm:text-4xl font-extrabold text-stone-900 font-display">Why Families Love FarmerDirect</h2>
+          <p className="text-stone-500 mt-3 text-sm sm:text-base max-w-2xl mx-auto">We're cutting out the middlemen so you eat better and farmers earn more. It's a win-win for everyone.</p>
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 sm:gap-12">
+          <div className="text-center space-y-4">
+            <div className="w-16 h-16 mx-auto bg-emerald-100 rounded-2xl flex items-center justify-center text-emerald-600 shadow-sm border border-emerald-200">
+              <Sparkles className="w-8 h-8" />
+            </div>
+            <h3 className="text-lg font-bold text-stone-900">Picked Today, Eaten Today</h3>
+            <p className="text-sm text-stone-600 leading-relaxed">Unlike supermarkets where food sits in warehouses for weeks, our produce is harvested only after you order and delivered within 24 hours.</p>
+          </div>
+          
+          <div className="text-center space-y-4">
+            <div className="w-16 h-16 mx-auto bg-amber-100 rounded-2xl flex items-center justify-center text-amber-600 shadow-sm border border-amber-200">
+              <HeartHandshake className="w-8 h-8" />
+            </div>
+            <h3 className="text-lg font-bold text-stone-900">Fair Prices For Everyone</h3>
+            <p className="text-sm text-stone-600 leading-relaxed">By buying direct, you pay less than premium grocery stores, while farmers earn up to 3x more than selling to traditional wholesale brokers.</p>
+          </div>
+          
+          <div className="text-center space-y-4">
+            <div className="w-16 h-16 mx-auto bg-blue-100 rounded-2xl flex items-center justify-center text-blue-600 shadow-sm border border-blue-200">
+              <ShieldCheck className="w-8 h-8" />
+            </div>
+            <h3 className="text-lg font-bold text-stone-900">100% Quality Guarantee</h3>
+            <p className="text-sm text-stone-600 leading-relaxed">We stand behind every leaf and tomato. If your delivery isn't perfectly fresh and delicious, we'll replace it or refund you, no questions asked.</p>
+          </div>
+        </div>
+      </section>
+
+      {/* SOCIAL PROOF SECTION */}
+      <section className="bg-stone-50 py-12 sm:py-16 border-y border-stone-200/60">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-10">
+            <h2 className="text-3xl font-extrabold text-stone-900 font-display">Trusted by 5,000+ Happy Customers</h2>
+            <div className="flex items-center justify-center gap-1 mt-4">
+              {[...Array(5)].map((_, i) => <Sparkles key={i} className="w-5 h-5 text-amber-500 fill-amber-500" />)}
+              <span className="font-bold text-stone-700 ml-2">4.9 / 5 Average Rating</span>
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="bg-white p-6 rounded-2xl shadow-soft border border-stone-200">
+              <div className="flex items-center gap-1 mb-3 text-amber-500">
+                {[...Array(5)].map((_, i) => <span key={i}>★</span>)}
+              </div>
+              <p className="text-sm text-stone-700 italic mb-4">"The tomatoes were so sweet and fresh! I've stopped buying vegetables at the supermarket entirely. Knowing exactly which farm it comes from is amazing."</p>
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-forest-100 flex items-center justify-center text-forest-700 font-bold">SM</div>
+                <div>
+                  <p className="text-xs font-bold text-stone-900">Sophea M.</p>
+                  <p className="text-[10px] text-emerald-600 font-semibold flex items-center gap-1"><CheckCircle2 className="w-3 h-3" /> Verified Buyer</p>
+                </div>
+              </div>
+            </div>
+            
+            <div className="bg-white p-6 rounded-2xl shadow-soft border border-stone-200">
+              <div className="flex items-center gap-1 mb-3 text-amber-500">
+                {[...Array(5)].map((_, i) => <span key={i}>★</span>)}
+              </div>
+              <p className="text-sm text-stone-700 italic mb-4">"Delivery was exactly on time and the packaging was completely plastic-free. The mangoes from Battambang were the best I've had all season."</p>
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-bold">DR</div>
+                <div>
+                  <p className="text-xs font-bold text-stone-900">David R.</p>
+                  <p className="text-[10px] text-emerald-600 font-semibold flex items-center gap-1"><CheckCircle2 className="w-3 h-3" /> Verified Buyer</p>
+                </div>
+              </div>
+            </div>
+            
+            <div className="bg-white p-6 rounded-2xl shadow-soft border border-stone-200">
+              <div className="flex items-center gap-1 mb-3 text-amber-500">
+                {[...Array(5)].map((_, i) => <span key={i}>★</span>)}
+              </div>
+              <p className="text-sm text-stone-700 italic mb-4">"As a restaurant owner, consistent quality is crucial. FarmerDirect connects me straight to the source. Great prices and impeccable freshness."</p>
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center text-purple-700 font-bold">KT</div>
+                <div>
+                  <p className="text-xs font-bold text-stone-900">Kosal T.</p>
+                  <p className="text-[10px] text-emerald-600 font-semibold flex items-center gap-1"><CheckCircle2 className="w-3 h-3" /> Verified Restaurant</p>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </section>
@@ -377,6 +439,19 @@ export const HomePage: React.FC = () => {
           </div>
         </div>
       </section>
+
+      {/* STICKY MOBILE CTA BAR */}
+      <div
+        className={`fixed bottom-0 left-0 right-0 z-50 p-4 bg-white border-t border-stone-200 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] transform transition-transform duration-300 md:hidden ${
+          showMobileCTA ? 'translate-y-0' : 'translate-y-full'
+        }`}
+      >
+        <Link to="/products" className="block w-full">
+          <Button variant="primary" size="lg" className="w-full font-black text-sm py-3.5 shadow-lg shadow-forest-600/20">
+            Get Fresh Produce Now
+          </Button>
+        </Link>
+      </div>
     </PageTransition>
   );
 };
