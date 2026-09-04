@@ -29,3 +29,4 @@ class PaymentTransactionSerializer(serializers.ModelSerializer):
             'status', 'settled_at', 'created_at'
         ]
         read_only_fields = fields
+

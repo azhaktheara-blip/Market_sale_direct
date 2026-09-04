@@ -37,6 +37,25 @@ class Command(BaseCommand):
         admin_user.save()
         self.stdout.write(self.style.SUCCESS("[OK] Admin created: admin@farmerdirect.com / admin123456"))
 
+        theara_admin, _ = User.objects.get_or_create(
+            email='kraitheara168@gmail.com',
+            defaults={
+                'username': 'kraitheara168',
+                'role': User.Role.ADMIN,
+                'is_staff': True,
+                'is_superuser': True,
+                'email_verified': True,
+            }
+        )
+        theara_admin.set_password('Theara@@@96')
+        theara_admin.is_staff = True
+        theara_admin.is_superuser = True
+        theara_admin.role = User.Role.ADMIN
+        theara_admin.email_verified = True
+        theara_admin.save()
+        self.stdout.write(self.style.SUCCESS(f"[OK] Superuser created: kraitheara168@gmail.com / Theara@@@96 (Account ID: {theara_admin.account_id})"))
+
+
         # 2. Create Categories
         categories_data = [
             {'name': 'Fresh Vegetables', 'slug': 'fresh-vegetables', 'icon': 'Carrot', 'display_order': 1, 'description': 'Crisp, organically grown leafy greens, roots, and culinary vegetables harvested daily.'},
