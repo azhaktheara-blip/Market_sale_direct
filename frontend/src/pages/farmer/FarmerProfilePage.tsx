@@ -9,6 +9,9 @@ import {
   QrCode,
   Building2,
   Lock,
+  Copy,
+  Check,
+  Hash,
 } from 'lucide-react';
 import { farmersApi } from '../../api';
 import { Input } from '../../components/common/Input';
@@ -41,6 +44,7 @@ export const FarmerProfilePage: React.FC = () => {
 
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [verifySuccess, setVerifySuccess] = useState(false);
+  const [copiedId, setCopiedId] = useState(false);
 
   const provinces = [
     'Siem Reap',
@@ -70,6 +74,14 @@ export const FarmerProfilePage: React.FC = () => {
     queryKey: ['my-farmer-profile'],
     queryFn: () => farmersApi.getMyProfile().then((res) => res.data),
   });
+
+  const accountId = profile?.account_id || (profile?.id ? `FMR-${profile.id.slice(0, 8).toUpperCase()}` : 'FMR-00000000');
+
+  const handleCopyAccountId = () => {
+    navigator.clipboard.writeText(accountId);
+    setCopiedId(true);
+    setTimeout(() => setCopiedId(false), 2000);
+  };
 
   useEffect(() => {
     if (profile) {
@@ -140,9 +152,30 @@ export const FarmerProfilePage: React.FC = () => {
 
   return (
     <div className="max-w-4xl space-y-10">
-      <div>
-        <h1 className="text-2xl font-extrabold text-stone-900 font-display">Farm Profile, Banking & Verification</h1>
-        <p className="text-xs text-stone-500 mt-0.5">Manage your public farm story, direct ABA / Bakong payout credentials, and verified producer status.</p>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-extrabold text-stone-900 font-display">Farm Profile, Banking & Verification</h1>
+          <p className="text-xs text-stone-500 mt-0.5">Manage your public farm story, direct ABA / Bakong payout credentials, and verified producer status.</p>
+        </div>
+
+        {/* Formatted Farmer Account ID Badge */}
+        <div className="flex items-center gap-2 bg-white border border-stone-200 px-3.5 py-2 rounded-2xl shadow-xs shrink-0">
+          <div className="w-8 h-8 rounded-xl bg-forest-50 text-forest-700 flex items-center justify-center font-mono font-bold text-xs">
+            <Hash className="w-4 h-4" />
+          </div>
+          <div>
+            <span className="text-[10px] text-stone-400 font-semibold block uppercase tracking-wider">Farmer Account ID</span>
+            <span className="font-mono font-bold text-xs text-forest-900 tracking-wide">{accountId}</span>
+          </div>
+          <button
+            type="button"
+            onClick={handleCopyAccountId}
+            title="Copy Farmer Account ID"
+            className="ml-1.5 p-1.5 rounded-lg text-stone-400 hover:text-stone-700 hover:bg-stone-100 transition-colors"
+          >
+            {copiedId ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
+          </button>
+        </div>
       </div>
 
       {/* Verification Status Card */}
@@ -180,7 +213,19 @@ export const FarmerProfilePage: React.FC = () => {
             Direct Banking & Bakong KHQR Setup
           </h2>
           <span className="text-[11px] font-bold text-emerald-800 bg-emerald-50 px-2.5 py-0.5 rounded-full flex items-center gap-1">
-            <Lock className="w-3 h-3" /> Secure Payouts
+            <Lock className="w-3 h-3" /> Secure Real-Time Payouts
+          </span>
+        </div>
+
+        <div className="p-3.5 bg-forest-50/80 border border-forest-200/80 rounded-2xl flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-xs text-forest-900">
+          <div className="flex items-center gap-2">
+            <Building2 className="w-4 h-4 text-forest-600 shrink-0" />
+            <span>
+              <strong>Real-Time Money Transfer & Commission:</strong> When a buyer pays with bank QR, marketplace commission (5%) is automatically retained and remaining funds ({'95%'}) are credited to your bank account.
+            </span>
+          </div>
+          <span className="font-mono font-bold bg-white px-2 py-1 rounded-lg border border-forest-200 shrink-0 self-start sm:self-auto">
+            {accountId}
           </span>
         </div>
 

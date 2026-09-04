@@ -128,14 +128,39 @@ export const BakongPaymentModal: React.FC<BakongPaymentModalProps> = ({
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Bakong KHQR Universal Pay" maxWidth="md">
       {isSuccess ? (
-        <div className="py-8 text-center space-y-4">
-          <div className="w-16 h-16 bg-forest-100 text-forest-600 rounded-full flex items-center justify-center mx-auto animate-bounce">
+        <div className="py-6 text-center space-y-4">
+          <div className="w-16 h-16 bg-forest-100 text-forest-600 rounded-full flex items-center justify-center mx-auto animate-bounce shadow-xs">
             <CheckCircle2 className="w-10 h-10" />
           </div>
-          <h3 className="text-xl font-extrabold text-stone-900 font-display">Payment Confirmed & Verified!</h3>
-          <p className="text-xs text-stone-500 max-w-sm mx-auto">
-            Your transfer for Order #{orderNumber} was securely received in escrow. The grower has been scheduled for harvest.
-          </p>
+          <div className="space-y-1">
+            <h3 className="text-xl font-extrabold text-stone-900 font-display">Payment Confirmed & Settled!</h3>
+            <p className="text-xs text-stone-500 max-w-sm mx-auto">
+              Your transfer for Order #{orderNumber} was successfully processed via Bakong KHQR.
+            </p>
+          </div>
+
+          <div className="p-4 rounded-2xl bg-stone-50 border border-stone-200 text-left text-xs space-y-2 max-w-sm mx-auto">
+            <div className="flex items-center justify-between text-stone-600">
+              <span>Transaction Ref:</span>
+              <span className="font-mono font-bold text-stone-900">{paymentData?.transaction_id || `KHQR-${orderNumber}`}</span>
+            </div>
+            <div className="flex items-center justify-between text-stone-600">
+              <span>Amount Paid:</span>
+              <span className="font-bold text-stone-900">${totalAmountUSD} USD</span>
+            </div>
+            <div className="flex items-center justify-between text-forest-800 font-medium pt-1.5 border-t border-stone-200/60">
+              <span>Platform Commission:</span>
+              <span>${(parseFloat(totalAmountUSD) * 0.05).toFixed(2)} (5.0%)</span>
+            </div>
+            <div className="flex items-center justify-between text-forest-900 font-bold">
+              <span>Farmer Net Payout:</span>
+              <span className="text-forest-700 font-mono">${(parseFloat(totalAmountUSD) * 0.95).toFixed(2)}</span>
+            </div>
+            <div className="pt-2 border-t border-stone-200/60 text-[11px] text-emerald-800 flex items-center gap-1.5 font-medium">
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+              <span>Real money settled into farmer bank account & recorded in database.</span>
+            </div>
+          </div>
         </div>
       ) : (
         <div className="space-y-4">
@@ -238,6 +263,11 @@ export const BakongPaymentModal: React.FC<BakongPaymentModalProps> = ({
                     {copiedField === 'bakong' ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3" />}
                   </button>
                 </div>
+              </div>
+
+              <div className="flex items-center justify-between text-[11px] text-forest-800 bg-forest-50/80 px-2.5 py-1.5 rounded-xl border border-forest-100">
+                <span>Platform Commission:</span>
+                <span className="font-semibold">5.0% auto-deducted (95% to farmer)</span>
               </div>
 
               {paymentData.signature_hash && (

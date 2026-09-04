@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Sprout, Mail, Lock, User as UserIcon, Phone, AlertCircle, ShoppingBag, ShieldCheck, CheckCircle2, ArrowRight } from 'lucide-react';
+import { Sprout, Mail, Lock, User as UserIcon, Phone, AlertCircle, ShoppingBag, ShieldCheck, CheckCircle2, ArrowRight, Building2, QrCode, CreditCard } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { Input } from '../../components/common/Input';
 import { Button } from '../../components/common/Button';
@@ -20,6 +20,10 @@ const registerSchema = z.object({
   province: z.string().optional(),
   farming_practice: z.string().optional(),
   bio: z.string().optional(),
+  bank_name: z.string().optional(),
+  bank_account_name: z.string().optional(),
+  bank_account_number: z.string().optional(),
+  bakong_account_id: z.string().optional(),
 
   business_name: z.string().optional(),
   business_type: z.string().optional(),
@@ -87,6 +91,10 @@ export const RegisterPage: React.FC = () => {
       farm_name: '',
       province: 'Siem Reap',
       farming_practice: 'ORGANIC',
+      bank_name: 'ABA Bank',
+      bank_account_name: '',
+      bank_account_number: '',
+      bakong_account_id: '',
       business_type: 'INDIVIDUAL',
     },
   });
@@ -381,6 +389,65 @@ export const RegisterPage: React.FC = () => {
                     <option value="PERMACULTURE">Permaculture</option>
                     <option value="CONVENTIONAL">Sustainable Conventional</option>
                   </select>
+                </div>
+              </div>
+
+              {/* Direct Banking & KHQR Payment Setup */}
+              <div className="pt-3 border-t border-stone-100 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-stone-800 uppercase tracking-wider">
+                    <Building2 className="w-4 h-4 text-forest-600" />
+                    <span>Bank & KHQR Account Details</span>
+                  </div>
+                  <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-forest-50 text-forest-700 border border-forest-200">
+                    Real-Time Direct Payout
+                  </span>
+                </div>
+                <p className="text-[11px] text-stone-500">
+                  Buyers pay by scanning your dynamic KHQR code. Platform fee (5%) is automatically deducted, and your payout is credited seamlessly.
+                </p>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-stone-700 mb-1.5 uppercase tracking-wider">
+                      Bank Name
+                    </label>
+                    <select
+                      {...register('bank_name')}
+                      className="w-full bg-white border border-stone-300 rounded-xl px-3.5 py-2.5 text-xs text-stone-900 focus:outline-none focus:border-forest-600 font-medium"
+                    >
+                      <option value="ABA Bank">ABA Bank</option>
+                      <option value="ACLEDA Bank">ACLEDA Bank</option>
+                      <option value="Canadia Bank">Canadia Bank</option>
+                      <option value="Wing Bank">Wing Bank</option>
+                      <option value="Sathapana Bank">Sathapana Bank</option>
+                      <option value="J Trust Royal Bank">J Trust Royal Bank</option>
+                      <option value="Bakong Wallet">Bakong Wallet (NBC)</option>
+                    </select>
+                  </div>
+
+                  <Input
+                    label="Account Holder Name"
+                    placeholder="e.g. SOKHA FARM CO., LTD"
+                    leftIcon={<UserIcon className="w-4 h-4" />}
+                    {...register('bank_account_name')}
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <Input
+                    label="Bank Account Number"
+                    placeholder="e.g. 001 234 567"
+                    leftIcon={<CreditCard className="w-4 h-4" />}
+                    {...register('bank_account_number')}
+                  />
+
+                  <Input
+                    label="Bakong Account ID"
+                    placeholder="e.g. sokha_farm@aba or 012888999@aclb"
+                    leftIcon={<QrCode className="w-4 h-4" />}
+                    {...register('bakong_account_id')}
+                  />
                 </div>
               </div>
             </div>

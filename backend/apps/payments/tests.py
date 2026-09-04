@@ -153,3 +153,55 @@ class PaymentSecurityTests(TestCase):
         payment.refresh_from_db()
         self.assertEqual(payment.status, Payment.Status.PENDING)
         self.assertEqual(response.data['status'], 'pending')
+
+    @override_settings(DEBUG=True)
+    def test_payment_success_records_transaction_with_commission_deduction(self):
+        from apps.payments.models import PaymentTransaction
+        self.client.force_authenticate(user=self.customer)
+        response = self.client.post(f'/api/v1/payments/{self.order.id}/simulate-success/')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        self.order.refresh_from_db()
+        self.assertEqual(self.order.payment_status, Order.PaymentStatus.PAID)
+
+        # Check PaymentTransaction record was created
+        tx = PaymentTransaction.objects.filter(order=self.order).first()
+        self.assertIsNotNone(tx)
+        self.assertEqual(tx.status, PaymentTransaction.Status.SUCCESS)
+        self.assertEqual(tx.gross_amount, self.order.total)
+        self.assertEqual(tx.platform_commission, self.order.marketplace_commission)
+        self.assertEqual(tx.farmer_net_payout, self.order.farmer_payout)
+        self.assertIsNotNone(tx.settled_at)
+
+        # Verify transaction list endpoint
+        list_resp = self.client.get('/api/v1/payments/transactions/')
+        self.assertEqual(list_resp.status_code, status.HTTP_200_OK)
+        tx_list = list_resp.data if isinstance(list_resp.data, list) else list_resp.data.get('results', [])
+        self.assertEqual(len(tx_list), 1)
+        self.assertEqual(tx_list[0]['transaction_id'], tx.transaction_id)
+        self.assertTrue(tx_list[0]['customer_account_id'].startswith('USR-'))
+        self.assertTrue(tx_list[0]['farmer_account_id'].startswith('FMR-'))
+
+    def test_farmer_registration_with_bank_details(self):
+        reg_payload = {
+            'email': 'green_organic_farm@example.com',
+            'username': 'greenorganic',
+            'password': 'SecureKhmer@2026!',
+            'role': 'FARMER',
+            'farm_name': 'Green Organic Farm',
+            'province': 'Battambang',
+            'bank_name': 'ABA Bank',
+            'bank_account_name': 'GREEN ORGANIC FARM CO',
+            'bank_account_number': '001 234 567',
+            'bakong_account_id': 'green_farm@aba'
+        }
+        res = self.client.post('/api/v1/auth/register/', reg_payload)
+        self.assertEqual(res.status_code, status.HTTP_201_CREATED)
+        new_farmer = User.objects.get(email='green_organic_farm@example.com')
+        self.assertTrue(new_farmer.account_id.startswith('FMR-'))
+        self.assertEqual(new_farmer.farmer_profile.bank_name, 'ABA Bank')
+        self.assertEqual(new_farmer.farmer_profile.bank_account_name, 'GREEN ORGANIC FARM CO')
+        self.assertEqual(new_farmer.farmer_profile.bank_account_number, '001 234 567')
+        self.assertEqual(new_farmer.farmer_profile.bakong_account_id, 'green_farm@aba')
+        self.assertEqual(new_farmer.farmer_profile.account_id, new_farmer.account_id)
+

@@ -4,8 +4,9 @@ from rest_framework.response import Response
 from rest_framework import status, permissions
 from drf_spectacular.utils import extend_schema
 from django.conf import settings
+from django.utils import timezone
 from django.db import transaction
-from .models import Payment, ProcessedWebhook
+from .models import Payment, PaymentTransaction, ProcessedWebhook
 from .services import PaymentService
 from apps.orders.models import Order
 from apps.core.throttling import PaymentRateThrottle
@@ -125,9 +126,11 @@ class SimulatePaymentSuccessView(APIView):
             return Response({'detail': 'Order not found.'}, status=status.HTTP_404_NOT_FOUND)
 
         payment.status = Payment.Status.COMPLETED
-        payment.save(update_fields=['status'])
+        payment.paid_at = timezone.now()
+        payment.save(update_fields=['status', 'paid_at'])
         order.payment_status = Order.PaymentStatus.PAID
         order.save(update_fields=['payment_status'])
+        PaymentService.record_transaction(payment, tx_status=PaymentTransaction.Status.SUCCESS)
 
         return Response({
             'status': 'success',
@@ -135,3 +138,28 @@ class SimulatePaymentSuccessView(APIView):
             'payment_status': payment.status,
             'order_status': order.status
         })
+
+
+from rest_framework.generics import ListAPIView
+from .serializers import PaymentTransactionSerializer
+
+@extend_schema(tags=['Payments'])
+class TransactionListView(ListAPIView):
+    """
+    List transactions for the authenticated user:
+    - Farmers see incoming sales, marketplace commission deductions, and net payouts.
+    - Customers see their payment receipts.
+    - Admins see all platform payment transactions.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+    serializer_class = PaymentTransactionSerializer
+
+    def get_queryset(self):
+        user = self.request.user
+        if user.role == 'ADMIN' or user.is_staff:
+            return PaymentTransaction.objects.select_related('order', 'customer', 'farmer').all()
+        elif user.role == 'FARMER' and hasattr(user, 'farmer_profile'):
+            return PaymentTransaction.objects.select_related('order', 'customer', 'farmer').filter(farmer=user.farmer_profile)
+        else:
+            return PaymentTransaction.objects.select_related('order', 'customer', 'farmer').filter(customer=user)
+

@@ -89,3 +89,4 @@ def get_fallback_produce_image(product_name: str = '', category_slug: str = '') 
                 return url
 
     return DEFAULT_PRODUCE_IMAGE
+

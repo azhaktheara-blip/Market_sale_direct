@@ -6,7 +6,7 @@ from abc import ABC, abstractmethod
 from decimal import Decimal
 from django.conf import settings
 from django.utils import timezone
-from .models import Payment
+from .models import Payment, PaymentTransaction
 from apps.orders.models import Order
 
 
@@ -304,6 +304,44 @@ class StripeGateway(BasePaymentGateway):
         return True
 
 
+def record_payment_transaction(payment: Payment, tx_status: str = PaymentTransaction.Status.SUCCESS) -> PaymentTransaction:
+    """
+    Records an immutable financial transaction and platform commission deduction
+    for accounting, audit trails, and farmer payout reconciliation.
+    """
+    order = payment.order
+    farmer = order.farmer
+    gateway_resp = payment.payment_gateway_response or {}
+
+    tx_id = payment.transaction_id or f"TX-{uuid.uuid4().hex[:12].upper()}"
+
+    transaction, _ = PaymentTransaction.objects.update_or_create(
+        transaction_id=tx_id,
+        defaults={
+            'order': order,
+            'payment': payment,
+            'customer': order.customer,
+            'farmer': farmer,
+            'gross_amount': order.total,
+            'subtotal': order.subtotal,
+            'delivery_fee': order.delivery_fee,
+            'commission_rate_percentage': order.commission_rate_percentage,
+            'platform_commission': order.marketplace_commission,
+            'farmer_net_payout': order.farmer_payout,
+            'currency': gateway_resp.get('currency', 'USD'),
+            'payment_method': payment.payment_method,
+            'qr_payload': gateway_resp.get('qr_string') or gateway_resp.get('qr_payload', ''),
+            'bank_name': getattr(farmer, 'bank_name', '') or '',
+            'bank_account_name': getattr(farmer, 'bank_account_name', '') or '',
+            'bank_account_number': getattr(farmer, 'bank_account_number', '') or '',
+            'bakong_account_id': getattr(farmer, 'bakong_account_id', '') or '',
+            'status': tx_status,
+            'settled_at': timezone.now() if tx_status == PaymentTransaction.Status.SUCCESS else None,
+        }
+    )
+    return transaction
+
+
 class PaymentService:
     @staticmethod
     def get_gateway(method: str) -> BasePaymentGateway:
@@ -311,7 +349,7 @@ class PaymentService:
             Order.PaymentMethod.COD: CashOnDeliveryGateway(),
             Order.PaymentMethod.BAKONG_QR: ABAPayWayGateway(),
             Order.PaymentMethod.CREDIT_CARD: StripeGateway(),
-            Order.PaymentMethod.BANK_TRANSFER: CashOnDeliveryGateway(),
+            Order.PaymentMethod.BANK_TRANSFER: ABAPayWayGateway(),
         }
         return gateways.get(method, ABAPayWayGateway())
 
@@ -323,5 +361,11 @@ class PaymentService:
     @staticmethod
     def verify_payment(payment: Payment) -> bool:
         gateway = PaymentService.get_gateway(payment.payment_method)
-        return gateway.verify_payment(payment)
+        verified = gateway.verify_payment(payment)
+        if verified:
+            record_payment_transaction(payment, tx_status=PaymentTransaction.Status.SUCCESS)
+        return verified
+
+    record_transaction = staticmethod(record_payment_transaction)
+
 

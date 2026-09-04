@@ -21,18 +21,19 @@ class FarmerSummarySerializer(serializers.ModelSerializer):
 
 
 class UserSerializer(serializers.ModelSerializer):
+    account_id = serializers.CharField(read_only=True)
     customer_profile = CustomerProfileSerializer(read_only=True)
     farmer_profile = FarmerSummarySerializer(read_only=True)
 
     class Meta:
         model = User
         fields = [
-            'id', 'email', 'username', 'phone_number', 'role',
+            'id', 'account_id', 'email', 'username', 'phone_number', 'role',
             'email_verified', 'auth_provider',
             'avatar', 'customer_profile', 'farmer_profile',
             'created_at', 'updated_at'
         ]
-        read_only_fields = ['id', 'email_verified', 'auth_provider', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'account_id', 'email_verified', 'auth_provider', 'created_at', 'updated_at']
 
 
 from django.contrib.auth.password_validation import validate_password
@@ -51,6 +52,10 @@ class RegisterSerializer(serializers.ModelSerializer):
     district = serializers.CharField(required=False, allow_blank=True)
     farming_practice = serializers.CharField(required=False, allow_blank=True)
     bio = serializers.CharField(required=False, allow_blank=True)
+    bank_name = serializers.CharField(required=False, allow_blank=True)
+    bank_account_name = serializers.CharField(required=False, allow_blank=True)
+    bank_account_number = serializers.CharField(required=False, allow_blank=True)
+    bakong_account_id = serializers.CharField(required=False, allow_blank=True)
 
     # Extra fields for business customers
     business_name = serializers.CharField(max_length=150, required=False, allow_blank=True)
@@ -62,6 +67,7 @@ class RegisterSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'email', 'username', 'password', 'phone_number', 'role',
             'farm_name', 'province', 'district', 'farming_practice', 'bio',
+            'bank_name', 'bank_account_name', 'bank_account_number', 'bakong_account_id',
             'business_name', 'business_type', 'profile_image'
         ]
 
@@ -92,6 +98,10 @@ class RegisterSerializer(serializers.ModelSerializer):
         district = validated_data.pop('district', '')
         farming_practice = validated_data.pop('farming_practice', FarmerProfile.FarmingPractice.ORGANIC)
         bio = validated_data.pop('bio', '')
+        bank_name = validated_data.pop('bank_name', 'ABA Bank')
+        bank_account_name = validated_data.pop('bank_account_name', '')
+        bank_account_number = validated_data.pop('bank_account_number', '')
+        bakong_account_id = validated_data.pop('bakong_account_id', '')
         business_name = validated_data.pop('business_name', '')
         business_type = validated_data.pop('business_type', CustomerProfile.BusinessType.INDIVIDUAL)
         profile_image = validated_data.pop('profile_image', None)
@@ -112,7 +122,11 @@ class RegisterSerializer(serializers.ModelSerializer):
                 district=district,
                 farming_practice=farming_practice or FarmerProfile.FarmingPractice.ORGANIC,
                 bio=bio or f"Fresh natural produce straight from {farm_name}.",
-                story=f"Welcome to {farm_name}. We take pride in cultivating healthy, clean, and sustainable agricultural products directly for our community."
+                story=f"Welcome to {farm_name}. We take pride in cultivating healthy, clean, and sustainable agricultural products directly for our community.",
+                bank_name=bank_name or 'ABA Bank',
+                bank_account_name=bank_account_name or farm_name,
+                bank_account_number=bank_account_number,
+                bakong_account_id=bakong_account_id,
             )
             if profile_image:
                 profile.profile_image = profile_image
@@ -151,6 +165,7 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
 
         user_data = {
             'id': str(user.id),
+            'account_id': user.account_id,
             'email': user.email,
             'username': user.username,
             'phone_number': user.phone_number,

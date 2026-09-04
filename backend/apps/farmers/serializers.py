@@ -3,19 +3,22 @@ from .models import FarmerProfile, FarmerVerification
 
 
 class FarmerSummarySerializer(serializers.ModelSerializer):
+    account_id = serializers.CharField(read_only=True)
+
     class Meta:
         model = FarmerProfile
-        fields = ['id', 'farm_name', 'slug', 'province', 'is_verified', 'verification_status', 'profile_image', 'rating_avg']
+        fields = ['id', 'account_id', 'farm_name', 'slug', 'province', 'is_verified', 'verification_status', 'profile_image', 'rating_avg']
 
 
 
 class FarmerPublicListSerializer(serializers.ModelSerializer):
+    account_id = serializers.CharField(read_only=True)
     product_count = serializers.SerializerMethodField()
 
     class Meta:
         model = FarmerProfile
         fields = [
-            'id', 'farm_name', 'slug', 'bio', 'farming_practice',
+            'id', 'account_id', 'farm_name', 'slug', 'bio', 'farming_practice',
             'years_of_experience', 'profile_image', 'cover_image',
             'province', 'district', 'commune', 'address_line',
             'is_verified', 'verification_status',
@@ -28,13 +31,14 @@ class FarmerPublicListSerializer(serializers.ModelSerializer):
 
 
 class FarmerPublicDetailSerializer(serializers.ModelSerializer):
+    account_id = serializers.CharField(read_only=True)
     product_count = serializers.SerializerMethodField()
     products = serializers.SerializerMethodField()
 
     class Meta:
         model = FarmerProfile
         fields = [
-            'id', 'farm_name', 'slug', 'bio', 'story', 'farming_practice',
+            'id', 'account_id', 'farm_name', 'slug', 'bio', 'story', 'farming_practice',
             'years_of_experience', 'profile_image', 'cover_image',
             'province', 'district', 'commune', 'address_line',
             'latitude', 'longitude', 'phone_number', 'website_url',

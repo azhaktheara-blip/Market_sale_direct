@@ -2,6 +2,7 @@ export type UserRole = 'CUSTOMER' | 'FARMER' | 'ADMIN';
 
 export interface User {
   id: string;
+  account_id?: string;
   email: string;
   username: string;
   phone_number?: string;
@@ -37,6 +38,7 @@ export interface Address {
 
 export interface FarmerSummary {
   id: string;
+  account_id?: string;
   farm_name: string;
   slug: string;
   province: string;
@@ -265,6 +267,33 @@ export interface BakongPaymentInitiateResponse {
   aba_merchant_id?: string;
   direct_pay_link?: string;
   is_sandbox?: boolean;
+}
+
+export interface PaymentTransaction {
+  id: string;
+  transaction_id: string;
+  order: string;
+  order_number: string;
+  customer_email: string;
+  customer_account_id: string;
+  farmer_farm_name: string;
+  farmer_account_id: string;
+  gross_amount: string | number;
+  subtotal: string | number;
+  delivery_fee: string | number;
+  commission_rate_percentage: string | number;
+  platform_commission: string | number;
+  farmer_net_payout: string | number;
+  currency: string;
+  payment_method: string;
+  qr_payload?: string;
+  bank_name?: string;
+  bank_account_name?: string;
+  bank_account_number?: string;
+  bakong_account_id?: string;
+  status: 'PENDING' | 'SUCCESS' | 'FAILED' | 'REFUNDED';
+  settled_at?: string | null;
+  created_at: string;
 }
 
 export interface Cart {

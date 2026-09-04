@@ -21,6 +21,7 @@ import {
   Conversation,
   ChatMessage,
   BakongPaymentInitiateResponse,
+  PaymentTransaction,
 } from '../types';
 
 export const authApi = {
@@ -165,6 +166,8 @@ export const paymentsApi = {
     apiClient.post<{ status: string; payment_status: string; order_status: string }>(`/payments/${orderId}/verify/`),
   simulateSuccess: (orderId: string) =>
     apiClient.post<{ status: string; message: string; payment_status: string; order_status: string }>(`/payments/${orderId}/simulate-success/`),
+  getTransactions: () =>
+    apiClient.get<PaymentTransaction[] | PaginatedResponse<PaymentTransaction>>('/payments/transactions/'),
 };
 
 export const subscriptionsApi = {

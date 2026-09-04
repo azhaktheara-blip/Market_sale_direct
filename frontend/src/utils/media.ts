@@ -274,3 +274,4 @@ export const getProductImage = (
     (typeof product.category === 'object' ? product.category?.slug || product.category?.name : product.category);
   return getProduceFallbackImage(product.name, cat);
 };
+

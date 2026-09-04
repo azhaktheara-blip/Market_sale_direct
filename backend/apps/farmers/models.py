@@ -91,6 +91,10 @@ class FarmerProfile(TimeStampedModel):
             self.rating_count = 0
         self.save(update_fields=['rating_avg', 'rating_count'])
 
+    @property
+    def account_id(self):
+        return self.user.account_id if self.user else ''
+
     def __str__(self):
         return f"{self.farm_name} ({self.province})"
 

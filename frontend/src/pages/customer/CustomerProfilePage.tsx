@@ -3,7 +3,7 @@ import { useAuth } from '../../context/AuthContext';
 import { authApi } from '../../api';
 import { Input } from '../../components/common/Input';
 import { Button } from '../../components/common/Button';
-import { CheckCircle2 } from 'lucide-react';
+import { CheckCircle2, Copy, Check, User as UserIcon, ShieldCheck, Hash } from 'lucide-react';
 
 export const CustomerProfilePage: React.FC = () => {
   const { user, updateUser } = useAuth();
@@ -16,6 +16,15 @@ export const CustomerProfilePage: React.FC = () => {
 
   const [isSaving, setIsSaving] = useState(false);
   const [successMsg, setSuccessMsg] = useState(false);
+  const [copiedId, setCopiedId] = useState(false);
+
+  const accountId = user?.account_id || (user?.id ? `USR-${user.id.slice(0, 8).toUpperCase()}` : 'USR-00000000');
+
+  const handleCopyAccountId = () => {
+    navigator.clipboard.writeText(accountId);
+    setCopiedId(true);
+    setTimeout(() => setCopiedId(false), 2000);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -40,9 +49,30 @@ export const CustomerProfilePage: React.FC = () => {
 
   return (
     <div className="max-w-2xl space-y-6">
-      <div>
-        <h1 className="text-2xl font-extrabold text-stone-900 font-display">Profile Settings</h1>
-        <p className="text-xs text-stone-500 mt-0.5">Manage your personal information and buyer preferences.</p>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-extrabold text-stone-900 font-display">Profile Settings</h1>
+          <p className="text-xs text-stone-500 mt-0.5">Manage your personal information and buyer preferences.</p>
+        </div>
+
+        {/* Formatted Account ID Badge */}
+        <div className="flex items-center gap-2 bg-white border border-stone-200 px-3.5 py-2 rounded-2xl shadow-xs">
+          <div className="w-8 h-8 rounded-xl bg-forest-50 text-forest-700 flex items-center justify-center font-mono font-bold text-xs">
+            <Hash className="w-4 h-4" />
+          </div>
+          <div>
+            <span className="text-[10px] text-stone-400 font-semibold block uppercase tracking-wider">Account ID</span>
+            <span className="font-mono font-bold text-xs text-stone-800 tracking-wide">{accountId}</span>
+          </div>
+          <button
+            type="button"
+            onClick={handleCopyAccountId}
+            title="Copy Account ID"
+            className="ml-1.5 p-1.5 rounded-lg text-stone-400 hover:text-stone-700 hover:bg-stone-100 transition-colors"
+          >
+            {copiedId ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
+          </button>
+        </div>
       </div>
 
       {successMsg && (
@@ -53,7 +83,10 @@ export const CustomerProfilePage: React.FC = () => {
       )}
 
       <form onSubmit={handleSubmit} className="bg-white rounded-3xl p-6 sm:p-8 border border-stone-200 shadow-soft space-y-5">
-        <Input label="Email Address" value={user?.email || ''} disabled className="bg-stone-50 text-stone-500 cursor-not-allowed" helperText="Email address cannot be changed." />
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <Input label="Account ID" value={accountId} disabled className="bg-stone-50 text-stone-600 font-mono font-bold cursor-not-allowed" helperText="Unique identifier for bank receipts & orders." />
+          <Input label="Email Address" value={user?.email || ''} disabled className="bg-stone-50 text-stone-500 cursor-not-allowed" helperText="Email address cannot be changed." />
+        </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Input label="Username" value={username} onChange={(e) => setUsername(e.target.value)} required />

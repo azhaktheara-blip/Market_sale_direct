@@ -62,6 +62,11 @@ class User(AbstractUser):
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = []
 
+    @property
+    def account_id(self):
+        prefix = 'FMR' if self.role == self.Role.FARMER else ('ADM' if self.role == self.Role.ADMIN else 'USR')
+        return f"{prefix}-{str(self.id)[:8].upper()}"
+
     def __str__(self):
         return f"{self.email} ({self.role})"
 
