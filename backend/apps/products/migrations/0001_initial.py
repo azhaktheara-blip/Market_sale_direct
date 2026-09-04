@@ -257,14 +257,14 @@ class Migration(migrations.Migration):
         migrations.AddConstraint(
             model_name="inventory",
             constraint=models.CheckConstraint(
-                condition=models.Q(("available_quantity__gte", 0)),
+                check=models.Q(("available_quantity__gte", 0)),
                 name="available_quantity_non_negative",
             ),
         ),
         migrations.AddConstraint(
             model_name="inventory",
             constraint=models.CheckConstraint(
-                condition=models.Q(("reserved_quantity__gte", 0)),
+                check=models.Q(("reserved_quantity__gte", 0)),
                 name="reserved_quantity_non_negative",
             ),
         ),

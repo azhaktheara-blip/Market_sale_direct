@@ -23,8 +23,8 @@ class CategorySerializer(serializers.ModelSerializer):
 
 
 class ProductImageSerializer(serializers.ModelSerializer):
-    thumbnail_url = serializers.ReadOnlyField()
-    medium_url = serializers.ReadOnlyField()
+    thumbnail_url = serializers.SerializerMethodField()
+    medium_url = serializers.SerializerMethodField()
     image_url = serializers.SerializerMethodField()
 
     class Meta:
@@ -36,10 +36,22 @@ class ProductImageSerializer(serializers.ModelSerializer):
             'processing_status'
         ]
 
+    def _resolve_url(self, url):
+        if not url:
+            return None
+        request = self.context.get('request')
+        if request and not url.startswith(('http://', 'https://', 'data:')):
+            return request.build_absolute_uri(url)
+        return url
+
     def get_image_url(self, obj):
-        if obj.image:
-            return obj.image.url
-        return None
+        return self._resolve_url(obj.image.url if obj.image else None)
+
+    def get_thumbnail_url(self, obj):
+        return self._resolve_url(obj.thumbnail_url)
+
+    def get_medium_url(self, obj):
+        return self._resolve_url(obj.medium_url)
 
 
 class InventorySerializer(serializers.ModelSerializer):
@@ -50,8 +62,8 @@ class InventorySerializer(serializers.ModelSerializer):
 
 class ProductListSerializer(serializers.ModelSerializer):
     primary_image = serializers.SerializerMethodField()
-    thumbnail_url = serializers.ReadOnlyField()
-    medium_image_url = serializers.ReadOnlyField()
+    thumbnail_url = serializers.SerializerMethodField()
+    medium_image_url = serializers.SerializerMethodField()
     blur_placeholder = serializers.ReadOnlyField()
     farmer = FarmerSummarySerializer(read_only=True)
     category_name = serializers.CharField(source='category.name', read_only=True)
@@ -70,11 +82,22 @@ class ProductListSerializer(serializers.ModelSerializer):
             'created_at'
         ]
 
+    def _resolve_url(self, url):
+        if not url:
+            return None
+        request = self.context.get('request')
+        if request and not url.startswith(('http://', 'https://', 'data:')):
+            return request.build_absolute_uri(url)
+        return url
+
     def get_primary_image(self, obj):
-        primary = obj.images.filter(is_primary=True).first() or obj.images.first()
-        if primary and primary.image:
-            return primary.image.url
-        return None
+        return self._resolve_url(obj.primary_image_url)
+
+    def get_thumbnail_url(self, obj):
+        return self._resolve_url(obj.thumbnail_url)
+
+    def get_medium_image_url(self, obj):
+        return self._resolve_url(obj.medium_image_url)
 
 
 class ProductDetailSerializer(serializers.ModelSerializer):
@@ -84,8 +107,8 @@ class ProductDetailSerializer(serializers.ModelSerializer):
     inventory = InventorySerializer(read_only=True)
     volume_tiers = VolumeDiscountTierSerializer(many=True, read_only=True)
     primary_image = serializers.SerializerMethodField()
-    thumbnail_url = serializers.ReadOnlyField()
-    medium_image_url = serializers.ReadOnlyField()
+    thumbnail_url = serializers.SerializerMethodField()
+    medium_image_url = serializers.SerializerMethodField()
     blur_placeholder = serializers.ReadOnlyField()
 
     class Meta:
@@ -100,11 +123,22 @@ class ProductDetailSerializer(serializers.ModelSerializer):
             'farmer', 'inventory', 'created_at', 'updated_at'
         ]
 
+    def _resolve_url(self, url):
+        if not url:
+            return None
+        request = self.context.get('request')
+        if request and not url.startswith(('http://', 'https://', 'data:')):
+            return request.build_absolute_uri(url)
+        return url
+
     def get_primary_image(self, obj):
-        primary = obj.images.filter(is_primary=True).first() or obj.images.first()
-        if primary and primary.image:
-            return primary.image.url
-        return None
+        return self._resolve_url(obj.primary_image_url)
+
+    def get_thumbnail_url(self, obj):
+        return self._resolve_url(obj.thumbnail_url)
+
+    def get_medium_image_url(self, obj):
+        return self._resolve_url(obj.medium_image_url)
 
 
 class ProductCreateUpdateSerializer(serializers.ModelSerializer):

@@ -78,8 +78,6 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
-
 # High-Performance Shared Caching (Redis in Production, LocMem in Dev / Testing)
 IS_TESTING = 'test' in sys.argv
 REDIS_CACHE_URL = os.getenv('REDIS_CACHE_URL', os.getenv('REDIS_URL'))
@@ -136,14 +134,22 @@ WSGI_APPLICATION = 'config.wsgi.application'
 # N instances * M workers can rapidly exhaust PostgreSQL's `max_connections`
 # limit unless external connection pooling (transaction or session pooling) is utilized.
 # ------------------------------------------------------------------------------
-DATABASE_URL = os.getenv('DATABASE_URL', f"sqlite:///{BASE_DIR / 'db.sqlite3'}")
-DATABASES = {
-    'default': dj_database_url.config(
-        default=DATABASE_URL,
-        conn_max_age=int(os.getenv('CONN_MAX_AGE', '600')),
-        conn_health_checks=True,
-    )
-}
+if IS_TESTING:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': ':memory:',
+        }
+    }
+else:
+    DATABASE_URL = os.getenv('DATABASE_URL', f"sqlite:///{BASE_DIR / 'db.sqlite3'}")
+    DATABASES = {
+        'default': dj_database_url.config(
+            default=DATABASE_URL,
+            conn_max_age=int(os.getenv('CONN_MAX_AGE', '600')),
+            conn_health_checks=True,
+        )
+    }
 
 # Custom User Model
 AUTH_USER_MODEL = 'accounts.User'
@@ -200,7 +206,6 @@ if AWS_STORAGE_BUCKET_NAME:
             'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage',
         },
     }
-    DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
     if AWS_S3_CUSTOM_DOMAIN:
         MEDIA_URL = f"https://{AWS_S3_CUSTOM_DOMAIN}/"
     elif AWS_STORAGE_BUCKET_NAME and not AWS_S3_ENDPOINT_URL:
@@ -215,7 +220,6 @@ else:
             'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage',
         },
     }
-    DEFAULT_FILE_STORAGE = 'django.core.files.storage.FileSystemStorage'
 
 # Cache Configuration (Redis with LocMem fallback for local/test)
 IS_TESTING = 'test' in sys.argv

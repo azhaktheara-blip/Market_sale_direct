@@ -147,21 +147,27 @@ class Product(TimeStampedModel):
         primary = self.images.filter(is_primary=True).first() or self.images.first()
         if primary and primary.image:
             return primary.image.url
-        return None
+        from .fallback_images import get_fallback_produce_image
+        cat_slug = getattr(self.category, 'slug', '') if hasattr(self, 'category') and self.category else ''
+        return get_fallback_produce_image(self.name, cat_slug)
 
     @property
     def thumbnail_url(self):
         primary = self.images.filter(is_primary=True).first() or self.images.first()
-        if primary:
+        if primary and primary.thumbnail_url:
             return primary.thumbnail_url
-        return None
+        from .fallback_images import get_fallback_produce_image
+        cat_slug = getattr(self.category, 'slug', '') if hasattr(self, 'category') and self.category else ''
+        return get_fallback_produce_image(self.name, cat_slug)
 
     @property
     def medium_image_url(self):
         primary = self.images.filter(is_primary=True).first() or self.images.first()
-        if primary:
+        if primary and primary.medium_url:
             return primary.medium_url
-        return None
+        from .fallback_images import get_fallback_produce_image
+        cat_slug = getattr(self.category, 'slug', '') if hasattr(self, 'category') and self.category else ''
+        return get_fallback_produce_image(self.name, cat_slug)
 
     @property
     def blur_placeholder(self):
@@ -274,11 +280,11 @@ class Inventory(TimeStampedModel):
         verbose_name_plural = 'Inventories'
         constraints = [
             models.CheckConstraint(
-                condition=models.Q(available_quantity__gte=0),
+                check=models.Q(available_quantity__gte=0),
                 name='available_quantity_non_negative'
             ),
             models.CheckConstraint(
-                condition=models.Q(reserved_quantity__gte=0),
+                check=models.Q(reserved_quantity__gte=0),
                 name='reserved_quantity_non_negative'
             ),
         ]

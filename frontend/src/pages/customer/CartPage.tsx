@@ -5,6 +5,7 @@ import { useCart } from '../../context/CartContext';
 import { Button } from '../../components/common/Button';
 import { EmptyState } from '../../components/common/EmptyState';
 import { Skeleton } from '../../components/common/Skeleton';
+import { OptimizedImage } from '../../components/common/OptimizedImage';
 
 export const CartPage: React.FC = () => {
   const { cart, isLoading, updateQuantity, removeFromCart, clearCart } = useCart();
@@ -84,11 +85,17 @@ export const CartPage: React.FC = () => {
                   <div key={item.id} className="py-4 first:pt-0 last:pb-0 flex items-center justify-between gap-4">
                     <div className="flex items-center gap-4 min-w-0">
                       <div className="w-16 h-16 rounded-xl bg-stone-100 overflow-hidden shrink-0 border border-stone-200">
-                        {item.product.primary_image ? (
-                          <img src={item.product.primary_image} alt={item.product.name} className="w-full h-full object-cover" />
-                        ) : (
-                          <span className="w-full h-full flex items-center justify-center text-xl">🌱</span>
-                        )}
+                        <OptimizedImage
+                          src={item.product.primary_image}
+                          thumbnailSrc={item.product.thumbnail_url}
+                          mediumSrc={item.product.medium_image_url}
+                          productName={item.product.name}
+                          category={typeof item.product.category === 'object' ? item.product.category?.name : undefined}
+                          alt={item.product.name}
+                          className="w-full h-full object-cover"
+                          containerClassName="w-full h-full"
+                          fallbackIconSize={20}
+                        />
                       </div>
                       <div className="min-w-0">
                         <Link to={`/products/${item.product.slug}`} className="font-bold text-stone-900 text-sm hover:text-forest-700 truncate block">

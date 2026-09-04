@@ -7,6 +7,7 @@ import { Button } from '../../components/common/Button';
 import { Badge } from '../../components/common/Badge';
 import { Skeleton } from '../../components/common/Skeleton';
 import { EmptyState } from '../../components/common/EmptyState';
+import { OptimizedImage } from '../../components/common/OptimizedImage';
 
 export const FarmerProductsPage: React.FC = () => {
   const queryClient = useQueryClient();
@@ -69,11 +70,17 @@ export const FarmerProductsPage: React.FC = () => {
                     <td className="p-4">
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-xl bg-stone-100 overflow-hidden shrink-0 border border-stone-200">
-                          {product.primary_image ? (
-                            <img src={product.primary_image} alt={product.name} className="w-full h-full object-cover" />
-                          ) : (
-                            <span className="w-full h-full flex items-center justify-center text-sm">🌱</span>
-                          )}
+                          <OptimizedImage
+                            src={product.primary_image}
+                            thumbnailSrc={product.thumbnail_url}
+                            mediumSrc={product.medium_image_url}
+                            productName={product.name}
+                            category={product.category_name}
+                            alt={product.name}
+                            className="w-full h-full object-cover"
+                            containerClassName="w-full h-full"
+                            fallbackIconSize={16}
+                          />
                         </div>
                         <div>
                           <Link to={`/products/${product.slug}`} className="font-bold text-stone-900 hover:text-forest-700">

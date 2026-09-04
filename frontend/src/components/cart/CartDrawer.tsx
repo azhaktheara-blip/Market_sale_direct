@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { useCart } from '../../context/CartContext';
 import { Button } from '../common/Button';
+import { OptimizedImage } from '../common/OptimizedImage';
 
 export const CartDrawer: React.FC = () => {
   const { cart, isCartOpen, closeCart, updateQuantity, removeFromCart } = useCart();
@@ -164,15 +165,17 @@ export const CartDrawer: React.FC = () => {
                       <div key={item.id} className="py-4 first:pt-1 last:pb-1 flex gap-3.5 items-center">
                         {/* Thumbnail */}
                         <div className="w-16 h-16 rounded-2xl bg-stone-100 overflow-hidden shrink-0 border border-stone-200/80 relative">
-                          {item.product.primary_image ? (
-                            <img
-                              src={item.product.primary_image}
-                              alt={item.product.name}
-                              className="w-full h-full object-cover"
-                            />
-                          ) : (
-                            <span className="w-full h-full flex items-center justify-center text-xl">🌱</span>
-                          )}
+                          <OptimizedImage
+                            src={item.product.primary_image}
+                            thumbnailSrc={item.product.thumbnail_url}
+                            mediumSrc={item.product.medium_image_url}
+                            productName={item.product.name}
+                            category={typeof item.product.category === 'object' ? item.product.category?.name : undefined}
+                            alt={item.product.name}
+                            className="w-full h-full object-cover"
+                            containerClassName="w-full h-full"
+                            fallbackIconSize={20}
+                          />
                         </div>
 
                         {/* Details */}
@@ -321,3 +324,4 @@ export const CartDrawer: React.FC = () => {
     </AnimatePresence>
   );
 };
+

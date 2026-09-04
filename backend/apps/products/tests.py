@@ -147,4 +147,38 @@ class ProductsCatalogTests(TestCase):
         self.assertTrue(bool(img_record.thumbnail))
         self.assertTrue(bool(img_record.medium))
 
+    def test_produce_image_fallbacks_and_url_resolution(self):
+        from apps.products.fallback_images import get_fallback_produce_image
+
+        # 1. Fallback mapping matches produce keywords
+        tomato_url = get_fallback_produce_image('Fresh Tomatos', 'fresh-vegetables')
+        self.assertIn('unsplash', tomato_url)
+
+        orange_url = get_fallback_produce_image('Pursat Oragines', 'tropical-fruits')
+        self.assertIn('unsplash', orange_url)
+
+        turmeric_url = get_fallback_produce_image('Fresh Turmeric Roots', 'herbs-spices')
+        self.assertIn('unsplash', turmeric_url)
+
+        # 2. Product without image returns valid fallback URL in API list
+        p_no_img = Product.objects.create(
+            farmer=self.farmer_profile,
+            category=self.category,
+            name='Fresh Organic Vine Tomatoes',
+            price=Decimal('1.50'),
+            unit='KG',
+            minimum_order_qty=Decimal('1.00'),
+            harvest_date=timezone.now().date(),
+            is_organic=True,
+            status=Product.Status.ACTIVE,
+            short_description='Vine tomatoes.',
+            description='Vine tomatoes details.'
+        )
+
+        res = self.client.get(f'/api/v1/products/{p_no_img.slug}/')
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertIsNotNone(res.data['primary_image'])
+        self.assertTrue(res.data['primary_image'].startswith('http'))
+
+
 

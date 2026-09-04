@@ -70,6 +70,8 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, priority = 'a
           mediumSrc={product.medium_image_url}
           src={product.primary_image}
           blurPlaceholder={product.blur_placeholder}
+          productName={product.name}
+          category={product.category_name || (typeof product.category === 'object' ? product.category?.name : undefined)}
           alt={product.name}
           priority={priority}
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"

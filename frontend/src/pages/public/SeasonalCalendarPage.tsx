@@ -5,6 +5,7 @@ import { Calendar, Sun, CloudRain, Sparkles, ArrowRight, Sprout } from 'lucide-r
 import { productsApi } from '../../api';
 import { Skeleton } from '../../components/common/Skeleton';
 import { Button } from '../../components/common/Button';
+import { OptimizedImage } from '../../components/common/OptimizedImage';
 
 export const SeasonalCalendarPage: React.FC = () => {
   const currentMonthIndex = new Date().getMonth() + 1; // 1..12
@@ -131,11 +132,14 @@ export const SeasonalCalendarPage: React.FC = () => {
                   >
                     <div>
                       <div className="w-full h-40 rounded-2xl bg-stone-100 overflow-hidden mb-3">
-                        {p.primary_image ? (
-                          <img src={p.primary_image} alt={p.name} className="w-full h-full object-cover" />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center text-3xl">🌱</div>
-                        )}
+                        <OptimizedImage
+                          src={p.primary_image}
+                          productName={p.name}
+                          alt={p.name}
+                          className="w-full h-full object-cover"
+                          containerClassName="w-full h-full"
+                          fallbackIconSize={28}
+                        />
                       </div>
                       <div className="flex items-center justify-between mb-1">
                         <span className="text-[10px] font-bold text-forest-800 bg-forest-50 px-2 py-0.5 rounded-full">

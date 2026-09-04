@@ -27,6 +27,7 @@ import { VolumeDiscountTable } from '../../components/products/VolumeDiscountTab
 import { ChatModal } from '../../components/messaging/ChatModal';
 import { useCart } from '../../context/CartContext';
 import { useAuth } from '../../context/AuthContext';
+import { resolveMediaUrl, getProductImage } from '../../utils/media';
 
 export const ProductDetailPage: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -93,7 +94,7 @@ export const ProductDetailPage: React.FC = () => {
     );
   }
 
-  const primaryImg = selectedImage || product.primary_image || '/placeholder-produce.jpg';
+  const primaryImg = selectedImage ? resolveMediaUrl(selectedImage) : getProductImage(product);
   const minQty = parseFloat(product.minimum_order_qty || '1');
   const isOut = product.status === 'OUT_OF_STOCK';
 
@@ -108,7 +109,7 @@ export const ProductDetailPage: React.FC = () => {
     "@context": "https://schema.org/",
     "@type": "Product",
     "name": product.name,
-    "image": product.primary_image,
+    "image": primaryImg || undefined,
     "description": product.description,
     "sku": product.id,
     "brand": {
@@ -188,6 +189,8 @@ export const ProductDetailPage: React.FC = () => {
             <OptimizedImage
               src={primaryImg}
               blurPlaceholder={product.blur_placeholder}
+              productName={product.name}
+              category={product.category?.name}
               alt={product.name}
               priority="high"
               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
@@ -209,24 +212,29 @@ export const ProductDetailPage: React.FC = () => {
           {/* Thumbnails */}
           {product.images && product.images.length > 1 && (
             <div className="flex gap-3 overflow-x-auto pb-2">
-              {product.images.map((img) => (
-                <button
-                  key={img.id}
-                  onClick={() => setSelectedImage(img.image_url || img.image)}
-                  className={`w-20 h-20 rounded-2xl overflow-hidden border-2 transition-all shrink-0 ${
-                    primaryImg === (img.image_url || img.image) ? 'border-forest-600 shadow-sm' : 'border-stone-200 hover:border-stone-300'
-                  }`}
-                >
-                  <OptimizedImage
-                    thumbnailSrc={img.thumbnail_url}
-                    src={img.image_url || img.image}
-                    blurPlaceholder={img.blur_placeholder}
-                    alt={img.alt_text || product.name}
-                    className="w-full h-full object-cover"
-                    containerClassName="w-full h-full"
-                  />
-                </button>
-              ))}
+              {product.images.map((img) => {
+                const imgResolved = resolveMediaUrl(img.image_url || img.image);
+                return (
+                  <button
+                    key={img.id}
+                    onClick={() => setSelectedImage(imgResolved)}
+                    className={`w-20 h-20 rounded-2xl overflow-hidden border-2 transition-all shrink-0 ${
+                      primaryImg === imgResolved ? 'border-forest-600 shadow-sm' : 'border-stone-200 hover:border-stone-300'
+                    }`}
+                  >
+                    <OptimizedImage
+                      thumbnailSrc={resolveMediaUrl(img.thumbnail_url)}
+                      src={imgResolved}
+                      productName={product.name}
+                      category={product.category?.name}
+                      blurPlaceholder={img.blur_placeholder}
+                      alt={img.alt_text || product.name}
+                      className="w-full h-full object-cover"
+                      containerClassName="w-full h-full"
+                    />
+                  </button>
+                );
+              })}
             </div>
           )}
         </div>
