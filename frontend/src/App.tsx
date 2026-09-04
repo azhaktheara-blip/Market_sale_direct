@@ -97,6 +97,8 @@ export const App: React.FC = () => {
                     <Route path="/calendar" element={<SeasonalCalendarPage />} />
                     <Route path="/how-it-works" element={<HowItWorksPage />} />
                     <Route path="/about" element={<AboutPage />} />
+                    <Route path="/farmer-ai" element={<FarmerAgriIntelligencePage />} />
+                    <Route path="/ai" element={<FarmerAgriIntelligencePage />} />
 
                     <Route path="/login" element={<LoginPage />} />
                     <Route path="/register" element={<RegisterPage />} />

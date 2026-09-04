@@ -73,6 +73,7 @@ urlpatterns = [
     path('api/v1/', include('apps.favorites.urls')),
     path('api/v1/', include('apps.inquiries.urls')),
     path('api/v1/', include('apps.ai.urls')),
+    path('api/', include('apps.ai.urls')),
 
     # Analytics
     path('api/v1/farmer/dashboard/', FarmerDashboardAnalyticsView.as_view(), name='farmer-dashboard-analytics'),

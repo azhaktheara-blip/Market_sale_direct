@@ -222,6 +222,31 @@ export const HomePage: React.FC = () => {
         </div>
       </section>
 
+      {/* AI AGRI-TECH SPOTLIGHT BANNER */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 my-8">
+        <div className="bg-gradient-to-r from-stone-900 via-stone-800 to-forest-950 text-white rounded-3xl p-6 sm:p-8 shadow-xl border border-stone-700/50 flex flex-col md:flex-row items-center justify-between gap-6">
+          <div className="space-y-2 text-center md:text-left">
+            <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[11px] font-extrabold uppercase tracking-wider">
+              <Sparkles className="w-3 h-3 text-emerald-400" />
+              <span>New Release • Agri-Tech Intelligence</span>
+            </div>
+            <h3 className="text-xl sm:text-2xl font-black font-display text-white">
+              Farmer AI Suite: Voice Intake, Computer Vision & Predictions
+            </h3>
+            <p className="text-xs text-stone-300 max-w-2xl leading-relaxed">
+              Try our Khmer voice-to-inventory intake, GPT-4o optical produce grader, and real-time Mekong monsoon harvest predictions.
+            </p>
+          </div>
+          <Link
+            to="/farmer-ai"
+            className="shrink-0 inline-flex items-center gap-2 px-6 py-3.5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs sm:text-sm shadow-lg shadow-emerald-900/40 transition-all active:scale-95"
+          >
+            <span>Explore Farmer AI Suite</span>
+            <ArrowRight className="w-4 h-4" />
+          </Link>
+        </div>
+      </section>
+
       {/* SOCIAL PROOF SECTION */}
       <section className="bg-stone-50 py-12 sm:py-16 border-y border-stone-200/60">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

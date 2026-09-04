@@ -5,14 +5,21 @@ import {
   AgriChatResponse,
 } from '../types/ai';
 
-// Base URL for the FastAPI AI Service
-// In dev, defaults to http://localhost:8000. In production or custom env, uses VITE_AI_API_URL.
+// Base URL for the AI Service
+// In dev, defaults to http://localhost:8000. In production on Vercel, points to live Render backend.
 const getAiBaseUrl = (): string => {
   const customUrl = import.meta.env.VITE_AI_API_URL;
   if (customUrl) {
     return customUrl.replace(/\/+$/, '');
   }
-  // Default development FastAPI server host
+  if (
+    typeof window !== 'undefined' &&
+    window.location.hostname !== 'localhost' &&
+    window.location.hostname !== '127.0.0.1'
+  ) {
+    return 'https://farmer-direct-backend.onrender.com';
+  }
+  // Default development server host
   return 'http://localhost:8000';
 };
 

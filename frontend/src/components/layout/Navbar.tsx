@@ -14,6 +14,7 @@ import {
   Heart,
   ShieldCheck,
   Store,
+  Sparkles,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useCart } from '../../context/CartContext';
@@ -96,6 +97,13 @@ export const Navbar: React.FC = () => {
             </Link>
             <Link to="/how-it-works" className="hover:text-forest-700 transition-colors">
               {t('nav.how_it_works')}
+            </Link>
+            <Link
+              to="/farmer-ai"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 transition-all shadow-xs"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-emerald-600 animate-pulse" />
+              <span>Farmer AI Suite</span>
             </Link>
           </nav>
 
@@ -325,6 +333,14 @@ export const Navbar: React.FC = () => {
                 className="py-2 px-3 rounded-xl hover:bg-forest-50 hover:text-forest-700"
               >
                 {t('nav.how_it_works')}
+              </Link>
+              <Link
+                to="/farmer-ai"
+                onClick={() => setMobileMenuOpen(false)}
+                className="py-2.5 px-3 rounded-xl bg-emerald-50 text-emerald-800 font-bold flex items-center gap-2 border border-emerald-200"
+              >
+                <Sparkles className="w-4 h-4 text-emerald-600" />
+                <span>Farmer AI Suite (Voice, Vision & Predictions)</span>
               </Link>
             </div>
           </div>
