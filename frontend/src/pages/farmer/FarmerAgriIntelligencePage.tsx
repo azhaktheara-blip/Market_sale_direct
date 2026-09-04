@@ -29,11 +29,12 @@ import { Button } from '../../components/common/Button';
 import { PageTransition } from '../../components/motion/PageTransition';
 import { useToast } from '../../context/ToastContext';
 import { useLanguage } from '../../context/LanguageContext';
+import { FarmerAIDashboard } from '../../components/ai/FarmerAIDashboard';
 
 export const FarmerAgriIntelligencePage: React.FC = () => {
   const { toast } = useToast();
   const { t } = useLanguage();
-  const [activeTab, setActiveTab] = useState<'doctor' | 'weather' | 'prices'>('doctor');
+  const [activeTab, setActiveTab] = useState<'farmer-ai' | 'doctor' | 'weather' | 'prices'>('farmer-ai');
 
   // Tab 1: AI Doctor State
   const [cropName, setCropName] = useState('Organic Tomatoes');
@@ -139,7 +140,19 @@ export const FarmerAgriIntelligencePage: React.FC = () => {
         </div>
 
         {/* Tab Navigation Controls */}
-        <div className="flex items-center bg-stone-100/80 p-1.5 rounded-2xl border border-stone-200 shadow-2xs">
+        <div className="flex items-center flex-wrap gap-1 bg-stone-100/80 p-1.5 rounded-2xl border border-stone-200 shadow-2xs">
+          <button
+            onClick={() => setActiveTab('farmer-ai')}
+            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all ${
+              activeTab === 'farmer-ai'
+                ? 'bg-emerald-600 text-white shadow-sm'
+                : 'text-stone-600 hover:text-stone-900 hover:bg-stone-200/60'
+            }`}
+          >
+            <Sparkles className="w-3.5 h-3.5" />
+            <span>Farmer AI Suite</span>
+          </button>
+
           <button
             onClick={() => setActiveTab('doctor')}
             className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all ${
@@ -177,6 +190,11 @@ export const FarmerAgriIntelligencePage: React.FC = () => {
           </button>
         </div>
       </div>
+
+      {/* ========================================================================= */}
+      {/* TAB 0: FARMER AI SUITE (VOICE, VISION GRADER, PREDICTIONS, CHATBOT)       */}
+      {/* ========================================================================= */}
+      {activeTab === 'farmer-ai' && <FarmerAIDashboard />}
 
       {/* ========================================================================= */}
       {/* TAB 1: AI CROP & LEAF DOCTOR (DIAGNOSTICS & SPOILAGE PREVENTION)          */}
