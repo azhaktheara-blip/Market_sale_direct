@@ -34,6 +34,10 @@ import os
 
 ADMIN_URL = os.getenv('ADMIN_URL', 'farmer-direct-saleadmin').strip('/')
 
+admin.site.site_header = "FarmerDirect • Enterprise Marketplace Admin"
+admin.site.site_title = "FarmerDirect Admin Console"
+admin.site.index_title = "Marketplace Operations & Operations Command"
+
 def api_root(request):
     return JsonResponse({
         'status': 'healthy',

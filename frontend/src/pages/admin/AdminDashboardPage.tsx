@@ -9,16 +9,27 @@ import {
   ShoppingBag,
   Clock,
   ArrowRight,
+  CreditCard,
+  ExternalLink,
+  CheckCircle2,
+  Building2,
+  Sparkles,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { analyticsApi } from '../../api';
+import { analyticsApi, paymentsApi } from '../../api';
 import { Badge } from '../../components/common/Badge';
 import { Skeleton } from '../../components/common/Skeleton';
+import type { PaymentTransaction } from '../../types';
 
 export const AdminDashboardPage: React.FC = () => {
   const { data: analytics, isLoading } = useQuery({
     queryKey: ['admin-analytics'],
     queryFn: () => analyticsApi.getAdminAnalytics().then((res) => res.data),
+  });
+
+  const { data: transactionsData } = useQuery({
+    queryKey: ['admin-transactions'],
+    queryFn: () => paymentsApi.getTransactions().then((res) => res.data),
   });
 
   if (isLoading) {
@@ -37,16 +48,63 @@ export const AdminDashboardPage: React.FC = () => {
 
   const metrics = analytics?.metrics;
 
+  const txList: PaymentTransaction[] = Array.isArray(transactionsData)
+    ? transactionsData
+    : (transactionsData as any)?.results || [];
+
   return (
     <div className="space-y-8">
-      {/* Top Banner */}
-      <div className="border-b border-stone-200 pb-4">
-        <h1 className="text-2xl font-extrabold text-stone-900 font-display">
-          Platform Administration & GMV Analytics
-        </h1>
-        <p className="text-xs text-stone-500 mt-0.5">
-          Overview of platform-wide marketplace volume, commissions, verified growers, and order operations.
-        </p>
+      {/* Amazon / Alibaba Style Executive Command Hero */}
+      <div className="bg-gradient-to-r from-stone-900 via-stone-800 to-forest-950 text-white p-6 sm:p-8 rounded-3xl shadow-xl border border-stone-700/50 relative overflow-hidden">
+        <div className="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-5">
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-2">
+              <span className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[11px] font-extrabold uppercase tracking-wider">
+                <Sparkles className="w-3 h-3" />
+                Enterprise Operations Command
+              </span>
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[10px] font-bold">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                Active KHQR Escrow
+              </span>
+            </div>
+            <h1 className="text-2xl sm:text-3xl font-extrabold font-display tracking-tight text-white">
+              FarmerDirect Marketplace Central
+            </h1>
+            <p className="text-xs text-stone-300 max-w-2xl leading-relaxed">
+              Real-time platform governance, automated 5% commission retention, direct producer bank settlements, and crop fulfillment intelligence.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2.5 flex-wrap">
+            <a
+              href="https://farmer-direct-backend.onrender.com/farmer-direct-saleadmin/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-amber-500 hover:bg-amber-400 text-stone-950 font-bold text-xs transition-all shadow-md active:scale-95"
+            >
+              <Building2 className="w-4 h-4" />
+              <span>Django Admin Portal</span>
+              <ExternalLink className="w-3.5 h-3.5" />
+            </a>
+
+            <Link
+              to="/admin/farmers"
+              className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-2xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs border border-white/20 transition-colors"
+            >
+              <Users className="w-4 h-4" />
+              <span>Growers</span>
+            </Link>
+
+            <Link
+              to="/admin/orders"
+              className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-2xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs border border-white/20 transition-colors"
+            >
+              <ShoppingBag className="w-4 h-4" />
+              <span>Orders</span>
+            </Link>
+          </div>
+        </div>
       </div>
 
       {/* Metrics Row */}
@@ -158,6 +216,82 @@ export const AdminDashboardPage: React.FC = () => {
             ))}
           </div>
         </div>
+      </div>
+
+      {/* Commission & Direct Bank KHQR Transactions Table */}
+      <div className="bg-white rounded-3xl p-6 sm:p-8 border border-stone-200 shadow-soft space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border-b border-stone-100 pb-3">
+          <div>
+            <h3 className="text-sm font-bold text-stone-900 uppercase tracking-wider flex items-center gap-2">
+              <CreditCard className="w-4 h-4 text-forest-700" />
+              <span>Real-Time Commission & KHQR Transactions</span>
+            </h3>
+            <p className="text-xs text-stone-500">
+              Automatic 5% platform fee deduction audit log and direct grower bank disbursements.
+            </p>
+          </div>
+          <span className="text-[11px] font-mono font-bold text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200 self-start sm:self-auto">
+            {txList.length} Settled Record(s)
+          </span>
+        </div>
+
+        {txList.length === 0 ? (
+          <div className="py-8 text-center text-xs text-stone-400">
+            No transactions recorded yet. Completed orders will appear here automatically with commission breakdown.
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead>
+                <tr className="border-b border-stone-200 text-[11px] font-bold text-stone-400 uppercase tracking-wider">
+                  <th className="py-2.5 px-3">Transaction ID</th>
+                  <th className="py-2.5 px-3">Order</th>
+                  <th className="py-2.5 px-3">Customer</th>
+                  <th className="py-2.5 px-3">Producer / Farm</th>
+                  <th className="py-2.5 px-3 text-right">Gross Total</th>
+                  <th className="py-2.5 px-3 text-right text-indigo-700 font-bold">Platform Fee (5%)</th>
+                  <th className="py-2.5 px-3 text-right text-forest-800 font-bold">Net Payout (95%)</th>
+                  <th className="py-2.5 px-3 text-center">Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-stone-100 font-medium">
+                {txList.slice(0, 10).map((tx) => (
+                  <tr key={tx.id} className="hover:bg-stone-50/80 transition-colors">
+                    <td className="py-3 px-3 font-mono font-bold text-stone-800">
+                      {tx.transaction_id}
+                    </td>
+                    <td className="py-3 px-3 font-mono text-stone-600">
+                      #{tx.order_number}
+                    </td>
+                    <td className="py-3 px-3">
+                      <span className="block text-stone-900 font-semibold">{tx.customer_email}</span>
+                      <span className="text-[10px] font-mono text-stone-400">{tx.customer_account_id}</span>
+                    </td>
+                    <td className="py-3 px-3">
+                      <span className="block text-stone-900 font-semibold">{tx.farmer_farm_name}</span>
+                      <span className="text-[10px] font-mono text-stone-400">{tx.farmer_account_id}</span>
+                    </td>
+                    <td className="py-3 px-3 text-right font-bold text-stone-900">
+                      ${parseFloat(String(tx.gross_amount)).toFixed(2)}
+                    </td>
+                    <td className="py-3 px-3 text-right font-bold text-indigo-700">
+                      +${parseFloat(String(tx.platform_commission)).toFixed(2)}
+                    </td>
+                    <td className="py-3 px-3 text-right font-bold text-forest-800 font-mono">
+                      ${parseFloat(String(tx.farmer_net_payout)).toFixed(2)}
+                    </td>
+                    <td className="py-3 px-3 text-center">
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                        <CheckCircle2 className="w-3 h-3" />
+                        {tx.status}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </div>
   );

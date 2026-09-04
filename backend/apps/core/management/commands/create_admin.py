@@ -34,3 +34,4 @@ class Command(BaseCommand):
                 email_verified=True,
             )
             self.stdout.write(self.style.SUCCESS(f"Successfully created SUPERUSER {email}. (Account ID: {user.account_id})"))
+

@@ -1,0 +1,279 @@
+{% extends "admin/base_site.html" %}
+{% load i18n static %}
+
+{% block extrastyle %}{{ block.super }}
+<style>
+  .admin-command-hero {
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 20px;
+    padding: 24px 28px;
+    color: #ffffff;
+    margin-bottom: 28px;
+    box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.12);
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  @media (min-width: 768px) {
+    .admin-command-hero {
+      flex-direction: row;
+      align-items: center;
+      justify-content: space-between;
+    }
+  }
+
+  .hero-title-area h2 {
+    font-size: 22px;
+    font-weight: 800;
+    margin: 0 0 6px 0;
+    letter-spacing: -0.02em;
+    color: #ffffff !important;
+    background: transparent !important;
+    padding: 0 !important;
+    border: none !important;
+  }
+
+  .hero-title-area p {
+    font-size: 13px;
+    color: #94a3b8;
+    margin: 0;
+  }
+
+  .hero-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .hero-btn-primary {
+    background: linear-gradient(135deg, #059669 0%, #047857 100%);
+    color: #ffffff !important;
+    font-weight: 700;
+    font-size: 13px;
+    padding: 10px 20px;
+    border-radius: 12px;
+    text-decoration: none;
+    box-shadow: 0 4px 12px rgba(5, 150, 105, 0.3);
+    transition: all 0.15s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .hero-btn-primary:hover {
+    transform: translateY(-1px);
+    background: linear-gradient(135deg, #047857 0%, #065f46 100%);
+  }
+
+  .hero-btn-secondary {
+    background: rgba(255, 255, 255, 0.1);
+    color: #ffffff !important;
+    font-weight: 600;
+    font-size: 13px;
+    padding: 10px 18px;
+    border-radius: 12px;
+    text-decoration: none;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    transition: all 0.15s ease;
+  }
+
+  .hero-btn-secondary:hover {
+    background: rgba(255, 255, 255, 0.2);
+  }
+
+  /* Quick Metric KPI Cards (Amazon/Alibaba Style) */
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 16px;
+    margin-bottom: 28px;
+  }
+
+  .kpi-card {
+    background: #ffffff;
+    border-radius: 18px;
+    padding: 18px 20px;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 2px 10px rgba(15, 23, 42, 0.03);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .kpi-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: #e2e8f0;
+  }
+
+  .kpi-card.kpi-orange::before { background: linear-gradient(90deg, #ff9900, #ff6000); }
+  .kpi-card.kpi-emerald::before { background: linear-gradient(90deg, #10b981, #059669); }
+  .kpi-card.kpi-indigo::before { background: linear-gradient(90deg, #6366f1, #4f46e5); }
+  .kpi-card.kpi-blue::before { background: linear-gradient(90deg, #38bdf8, #0284c7); }
+
+  .kpi-label {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #64748b;
+    margin-bottom: 6px;
+  }
+
+  .kpi-value {
+    font-size: 22px;
+    font-weight: 800;
+    color: #0f172a;
+    letter-spacing: -0.02em;
+    margin: 0 0 4px 0;
+  }
+
+  .kpi-meta {
+    font-size: 11px;
+    color: #94a3b8;
+  }
+
+  .quick-links-bar {
+    background: #ffffff;
+    border-radius: 16px;
+    padding: 14px 20px;
+    border: 1px solid #e2e8f0;
+    margin-bottom: 24px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    overflow-x: auto;
+  }
+
+  .quick-link-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 14px;
+    border-radius: 10px;
+    font-size: 12px;
+    font-weight: 700;
+    text-decoration: none;
+    background: #f8fafc;
+    color: #334155;
+    border: 1px solid #e2e8f0;
+    white-space: nowrap;
+    transition: all 0.15s ease;
+  }
+
+  .quick-link-pill:hover {
+    background: #0f172a;
+    color: #ffffff !important;
+    border-color: #0f172a;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div id="content-main">
+  <!-- Amazon/Alibaba Style Command Center Hero -->
+  <div class="admin-command-hero">
+    <div class="hero-title-area">
+      <h2>Marketplace Operations & Operations Center</h2>
+      <p>Real-time producer verification, catalog inventory, order fulfillment, and automated Bakong KHQR commission settlement.</p>
+    </div>
+    <div class="hero-actions">
+      <a href="https://market-sale-direct.vercel.app/admin/dashboard" target="_blank" class="hero-btn-primary">
+        <span>⚡ Launch React Enterprise Dashboard</span>
+        <span>→</span>
+      </a>
+      <a href="https://market-sale-direct.vercel.app/" target="_blank" class="hero-btn-secondary">
+        <span>🌐 Live Storefront</span>
+      </a>
+    </div>
+  </div>
+
+  <!-- Operational KPI Metric Cards -->
+  <div class="kpi-grid">
+    <div class="kpi-card kpi-orange">
+      <div class="kpi-label">Marketplace Commission</div>
+      <div class="kpi-value">5.0% Fixed</div>
+      <div class="kpi-meta">Auto-deducted to website account upon checkout</div>
+    </div>
+    <div class="kpi-card kpi-emerald">
+      <div class="kpi-label">Farmer Payout Engine</div>
+      <div class="kpi-value">95.0% Net</div>
+      <div class="kpi-meta">Real money settled via ABA Bank & Bakong KHQR</div>
+    </div>
+    <div class="kpi-card kpi-indigo">
+      <div class="kpi-label">Escrow Security</div>
+      <div class="kpi-value">Active 🛡️</div>
+      <div class="kpi-meta">Webhook verification & replay-protected</div>
+    </div>
+    <div class="kpi-card kpi-blue">
+      <div class="kpi-label">System Architecture</div>
+      <div class="kpi-value">Django 5 + React</div>
+      <div class="kpi-meta">High-throughput async Celery + Cloudinary</div>
+    </div>
+  </div>
+
+  <!-- Quick Filter Jump Bar -->
+  <div class="quick-links-bar">
+    <span style="font-size: 11px; font-weight: 800; color: #94a3b8; text-transform: uppercase;">Direct Access:</span>
+    <a href="{% url 'admin:payments_paymenttransaction_changelist' %}" class="quick-link-pill">
+      <span>💳 Payment Transactions</span>
+    </a>
+    <a href="{% url 'admin:orders_order_changelist' %}" class="quick-link-pill">
+      <span>📦 Marketplace Orders</span>
+    </a>
+    <a href="{% url 'admin:farmers_farmerprofile_changelist' %}" class="quick-link-pill">
+      <span>👨‍🌾 Farmer Profiles & Banking</span>
+    </a>
+    <a href="{% url 'admin:farmers_farmerverification_changelist' %}" class="quick-link-pill">
+      <span>📜 Verification Documents</span>
+    </a>
+    <a href="{% url 'admin:products_product_changelist' %}" class="quick-link-pill">
+      <span>🌾 Produce Catalog</span>
+    </a>
+    <a href="{% url 'admin:accounts_user_changelist' %}" class="quick-link-pill">
+      <span>👥 User Accounts</span>
+    </a>
+  </div>
+
+  <!-- Default App List Rendered Below -->
+  {% include "admin/app_list.html" %}
+</div>
+{% endblock %}
+
+{% block sidebar %}
+<div id="content-related">
+    <div class="module" id="recent-actions-module">
+        <h2>{% translate 'Recent actions' %}</h2>
+        <h3>{% translate 'My actions' %}</h3>
+        {% load log %}
+        {% get_admin_log 10 as admin_log for_user user %}
+        {% if not admin_log %}
+        <p>{% translate 'None available' %}</p>
+        {% else %}
+        <ul class="actionlist">
+        {% for entry in admin_log %}
+        <li class="{% if entry.is_addition %}addlink{% endif %}{% if entry.is_change %}changelink{% endif %}{% if entry.is_deletion %}deletelink{% endif %}">
+            {% if entry.is_deletion or not entry.get_admin_url %}
+                {{ entry.object_repr }}
+            {% else %}
+                <a href="{{ entry.get_admin_url }}">{{ entry.object_repr }}</a>
+            {% endif %}
+            <br>
+            {% if entry.content_type %}
+                <span class="mini quiet">{% filter capfirst %}{{ entry.content_type.name }}{% endfilter %}</span>
+            {% else %}
+                <span class="mini quiet">{% translate 'Unknown content' %}</span>
+            {% endif %}
+        </li>
+        {% endfor %}
+        </ul>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
