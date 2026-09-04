@@ -73,3 +73,78 @@ class ProductsCatalogTests(TestCase):
         created_p = Product.objects.get(name='Red Cherry Tomatoes')
         self.assertEqual(created_p.inventory.available_quantity, Decimal('100.00'))
 
+    def test_product_search_by_query_param(self):
+        # Search by crop name
+        res = self.client.get('/api/v1/products/?search=Bok+Choy')
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertGreaterEqual(res.data['count'], 1)
+
+        # Search by farm name
+        res2 = self.client.get('/api/v1/products/?search=Agri+Farm')
+        self.assertEqual(res2.status_code, status.HTTP_200_OK)
+        self.assertGreaterEqual(res2.data['count'], 1)
+
+        # Non-matching search
+        res3 = self.client.get('/api/v1/products/?search=NonExistentFruitXYZ')
+        self.assertEqual(res3.status_code, status.HTTP_200_OK)
+        self.assertEqual(res3.data['count'], 0)
+
+    def test_seasonal_calendar_caching(self):
+        from django.core.cache import cache
+        cache.delete('seasonal_calendar_v1')
+
+        # First request (cache miss -> rebuilds and caches)
+        res1 = self.client.get('/api/v1/products/seasonal-calendar/')
+        self.assertEqual(res1.status_code, status.HTTP_200_OK)
+        self.assertIsNotNone(cache.get('seasonal_calendar_v1'))
+
+        # Second request (cache hit)
+        res2 = self.client.get('/api/v1/products/seasonal-calendar/')
+        self.assertEqual(res2.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(res1.data), len(res2.data))
+
+    def test_async_product_image_upload_and_task(self):
+        import io
+        from unittest.mock import patch
+        from PIL import Image
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        from apps.products.models import ProductImage
+        from apps.products.tasks import process_product_image_task
+
+        # Generate test JPEG in memory
+        img_io = io.BytesIO()
+        pil_img = Image.new('RGB', (600, 600), color='green')
+        pil_img.save(img_io, format='JPEG')
+        img_io.seek(0)
+        uploaded = SimpleUploadedFile('test_bok_choy.jpg', img_io.getvalue(), content_type='image/jpeg')
+
+        self.client.force_authenticate(user=self.farmer_user)
+        with patch('apps.products.tasks.process_product_image_task.delay') as mock_task_delay:
+            res = self.client.post(
+                f'/api/v1/farmer/products/{self.product.id}/images/',
+                {'image': uploaded},
+                format='multipart'
+            )
+
+            self.assertEqual(res.status_code, status.HTTP_201_CREATED)
+            self.assertEqual(res.data['status'], 'processing')
+            self.assertEqual(len(res.data['images']), 1)
+            self.assertEqual(res.data['images'][0]['processing_status'], 'PENDING')
+
+            created_img_id = res.data['images'][0]['id']
+            mock_task_delay.assert_called_once_with(str(created_img_id))
+
+        img_record = ProductImage.objects.get(id=created_img_id)
+        self.assertEqual(img_record.processing_status, ProductImage.ProcessingStatus.PENDING)
+
+        # Run the celery task to complete image processing
+        task_result = process_product_image_task(str(created_img_id))
+        self.assertEqual(task_result['status'], 'success')
+
+        img_record.refresh_from_db()
+        self.assertEqual(img_record.processing_status, ProductImage.ProcessingStatus.READY)
+        self.assertTrue(bool(img_record.blur_placeholder))
+        self.assertTrue(bool(img_record.thumbnail))
+        self.assertTrue(bool(img_record.medium))
+
+

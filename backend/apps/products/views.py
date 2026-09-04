@@ -36,9 +36,8 @@ class CategoryListView(generics.ListAPIView):
 class ProductListView(generics.ListAPIView):
     serializer_class = ProductListSerializer
     permission_classes = [permissions.AllowAny]
-    filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
+    filter_backends = [DjangoFilterBackend, OrderingFilter]
     filterset_class = ProductFilter
-    search_fields = ['name', 'short_description', 'description', 'farmer__farm_name', 'farmer__province']
     ordering_fields = ['price', 'created_at', 'rating_avg', 'harvest_date']
     ordering = ['-created_at']
 
@@ -119,7 +118,16 @@ class SeasonalCalendarView(APIView):
     """Returns 12-month Cambodian harvest crop matrix."""
     permission_classes = [permissions.AllowAny]
 
+    CACHE_KEY = 'seasonal_calendar_v1'
+    CACHE_TTL = 15 * 60  # 15 minutes
+
     def get(self, request):
+        from django.core.cache import cache
+
+        cached_data = cache.get(self.CACHE_KEY)
+        if cached_data is not None:
+            return Response(cached_data)
+
         months = [
             {'month': 1, 'name': 'January', 'season': 'Cool Dry Season', 'focus': 'Leafy greens, sweet oranges, morning glory, heritage rice'},
             {'month': 2, 'name': 'February', 'season': 'Cool Dry Season', 'focus': 'Watermelons, Kampot black pepper harvest, tomatoes, cucumbers'},
@@ -153,6 +161,7 @@ class SeasonalCalendarView(APIView):
                 'total_crops': len(matching)
             })
 
+        cache.set(self.CACHE_KEY, calendar_data, self.CACHE_TTL)
         return Response(calendar_data)
 
 
@@ -177,25 +186,25 @@ class ProductImageUploadView(APIView):
         quality_reports = []
 
         from .services import ProductImageService
+        from .tasks import process_product_image_task
         is_first = not product.images.exists()
 
         for idx, f in enumerate(files):
             try:
-                img_instance, quality = ProductImageService.process_and_create_image(
+                img_instance = ProductImageService.create_pending_image(
                     product=product,
                     uploaded_file=f,
                     is_primary=is_first and (idx == 0),
                     alt_text=request.data.get('alt_text', f"{product.name} produce photo")
                 )
+                process_product_image_task.delay(str(img_instance.id))
                 created_images.append(ProductImageSerializer(img_instance).data)
-                quality_reports.append(quality)
             except Exception as e:
-                return Response({'detail': f"Image processing error: {str(e)}"}, status=status.HTTP_400_BAD_REQUEST)
+                return Response({'detail': f"Image upload error: {str(e)}"}, status=status.HTTP_400_BAD_REQUEST)
 
         return Response({
-            'status': 'success',
+            'status': 'processing',
             'images': created_images,
-            'quality_reports': quality_reports
         }, status=status.HTTP_201_CREATED)
 
 

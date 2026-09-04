@@ -32,7 +32,8 @@ class ProductImageSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'image', 'thumbnail', 'medium', 'image_url',
             'thumbnail_url', 'medium_url', 'blur_placeholder',
-            'is_primary', 'alt_text', 'display_order', 'width', 'height'
+            'is_primary', 'alt_text', 'display_order', 'width', 'height',
+            'processing_status'
         ]
 
     def get_image_url(self, obj):

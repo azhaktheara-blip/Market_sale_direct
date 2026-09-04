@@ -4,6 +4,9 @@ from django.utils.text import slugify
 from django.core.validators import MinValueValidator
 from apps.core.models import TimeStampedModel
 from apps.farmers.models import FarmerProfile
+from django.contrib.postgres.search import SearchVectorField
+from django.contrib.postgres.indexes import GinIndex
+from django.db import connection
 
 
 class Category(TimeStampedModel):
@@ -88,12 +91,14 @@ class Product(TimeStampedModel):
     )
     rating_avg = models.DecimalField(max_digits=3, decimal_places=2, default=0.00, db_index=True)
     rating_count = models.PositiveIntegerField(default=0)
+    search_vector = SearchVectorField(null=True, blank=True)
 
     class Meta:
         ordering = ['-created_at']
         indexes = [
             models.Index(fields=['status', 'is_organic', 'category']),
             models.Index(fields=['price', 'rating_avg']),
+            GinIndex(fields=['search_vector'], name='product_search_vector_gin'),
         ]
 
     def save(self, *args, **kwargs):
@@ -106,6 +111,16 @@ class Product(TimeStampedModel):
                 counter += 1
             self.slug = slug
         super().save(*args, **kwargs)
+        if connection.vendor == 'postgresql':
+            from django.contrib.postgres.search import SearchVector
+            Product.objects.filter(id=self.id).update(
+                search_vector=(
+                    SearchVector('name', weight='A') +
+                    SearchVector('short_description', weight='B') +
+                    SearchVector('description', weight='C') +
+                    SearchVector('farmer__farm_name', weight='B')
+                )
+            )
 
     def get_unit_price_for_quantity(self, quantity):
         qty = Decimal(str(quantity))
@@ -186,6 +201,11 @@ class VolumeDiscountTier(TimeStampedModel):
 
 
 class ProductImage(TimeStampedModel):
+    class ProcessingStatus(models.TextChoices):
+        PENDING = 'PENDING', 'Pending'
+        READY = 'READY', 'Ready'
+        FAILED = 'FAILED', 'Failed'
+
     product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='images')
     image = models.ImageField(upload_to='products/%Y/%m/')
     thumbnail = models.ImageField(upload_to='products/thumbs/%Y/%m/', blank=True, null=True)
@@ -196,6 +216,12 @@ class ProductImage(TimeStampedModel):
     is_primary = models.BooleanField(default=False)
     alt_text = models.CharField(max_length=200, blank=True)
     display_order = models.PositiveIntegerField(default=0)
+    processing_status = models.CharField(
+        max_length=20,
+        choices=ProcessingStatus.choices,
+        default=ProcessingStatus.PENDING,
+        db_index=True
+    )
 
     class Meta:
         ordering = ['-is_primary', 'display_order', 'created_at']

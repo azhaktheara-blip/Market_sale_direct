@@ -92,6 +92,84 @@ class ProductImageService:
         return ContentFile(buf.getvalue())
 
     @classmethod
+    def create_pending_image(
+        cls,
+        product: Product,
+        uploaded_file,
+        is_primary: bool = False,
+        alt_text: str = ''
+    ) -> ProductImage:
+        """
+        Saves the raw uploaded image file synchronously with processing_status=PENDING
+        without blocking on heavy Pillow compression and analysis.
+        """
+        if uploaded_file.size > cls.MAX_FILE_SIZE_BYTES:
+            raise ValidationError(f"File size exceeds limit of {cls.MAX_FILE_SIZE_BYTES // (1024 * 1024)}MB.")
+
+        # Quick validation of format header
+        try:
+            pil_img = Image.open(uploaded_file)
+            orig_format = (pil_img.format or 'JPEG').upper()
+            if orig_format not in cls.ALLOWED_FORMATS:
+                raise ValidationError(f"Unsupported image format: {orig_format}. Please upload JPEG, PNG, or WebP.")
+            # Rewind file pointer for saving
+            if hasattr(uploaded_file, 'seek'):
+                uploaded_file.seek(0)
+        except Exception as e:
+            if isinstance(e, ValidationError):
+                raise
+            raise ValidationError(f"Invalid or corrupted image file: {str(e)}")
+
+        filename = uploaded_file.name
+        prod_img = ProductImage(
+            product=product,
+            is_primary=is_primary,
+            alt_text=alt_text or f"Fresh harvest {product.name}",
+            processing_status=ProductImage.ProcessingStatus.PENDING,
+        )
+        prod_img.image.save(filename, uploaded_file, save=True)
+        return prod_img
+
+    @classmethod
+    def process_existing_image(cls, prod_img: ProductImage) -> tuple[ProductImage, dict]:
+        """
+        Executes the heavy Pillow pipeline on an existing ProductImage row:
+        - Auto-orient EXIF
+        - Generate blur placeholder data URI
+        - Responsive WebP compression (1400px, 700px, 300px)
+        - Sharpness and exposure quality metrics
+        - Sets processing_status=READY
+        """
+        try:
+            prod_img.image.open()
+            pil_img = Image.open(prod_img.image)
+            pil_img = ImageOps.exif_transpose(pil_img)
+        except Exception as e:
+            prod_img.processing_status = ProductImage.ProcessingStatus.FAILED
+            prod_img.save(update_fields=['processing_status'])
+            raise ValidationError(f"Could not open image file: {str(e)}")
+
+        quality_info = cls.check_image_quality(pil_img)
+        blur_placeholder = cls.generate_blur_placeholder(pil_img)
+        full_content = cls._compress_to_webp(pil_img, max_dim=1400, quality=88)
+        medium_content = cls._compress_to_webp(pil_img, max_dim=700, quality=85)
+        thumb_content = cls._compress_to_webp(pil_img, max_dim=300, quality=80)
+
+        filename_base = f"{prod_img.product.slug[:30]}_{str(prod_img.id)[:8]}"
+
+        prod_img.width = pil_img.width
+        prod_img.height = pil_img.height
+        prod_img.blur_placeholder = blur_placeholder
+        prod_img.processing_status = ProductImage.ProcessingStatus.READY
+
+        prod_img.image.save(f"{filename_base}_full.webp", full_content, save=False)
+        prod_img.medium.save(f"{filename_base}_med.webp", medium_content, save=False)
+        prod_img.thumbnail.save(f"{filename_base}_thumb.webp", thumb_content, save=False)
+        prod_img.save()
+
+        return prod_img, quality_info
+
+    @classmethod
     def process_and_create_image(
         cls,
         product: Product,
@@ -100,47 +178,14 @@ class ProductImageService:
         alt_text: str = ''
     ) -> tuple[ProductImage, dict]:
         """
-        Processes a raw uploaded file into full, medium, and thumbnail WebP files,
-        creates the ProductImage record, and returns the image along with quality diagnostics.
+        Synchronous wrapper that creates the pending image and immediately processes it.
         """
-        if uploaded_file.size > cls.MAX_FILE_SIZE_BYTES:
-            raise ValidationError(f"File size exceeds limit of {cls.MAX_FILE_SIZE_BYTES // (1024 * 1024)}MB.")
-
-        try:
-            pil_img = Image.open(uploaded_file)
-            pil_img = ImageOps.exif_transpose(pil_img)  # Auto-orient based on phone sensor
-        except Exception as e:
-            raise ValidationError(f"Invalid or corrupted image file: {str(e)}")
-
-        orig_format = pil_img.format or 'JPEG'
-        if orig_format.upper() not in cls.ALLOWED_FORMATS:
-            raise ValidationError(f"Unsupported image format: {orig_format}. Please upload JPEG, PNG, or WebP.")
-
-        # Quality check heuristics
-        quality_info = cls.check_image_quality(pil_img)
-
-        # Generate responsive variations
-        blur_placeholder = cls.generate_blur_placeholder(pil_img)
-        full_content = cls._compress_to_webp(pil_img, max_dim=1400, quality=88)
-        medium_content = cls._compress_to_webp(pil_img, max_dim=700, quality=85)
-        thumb_content = cls._compress_to_webp(pil_img, max_dim=300, quality=80)
-
-        filename_base = f"{product.slug[:30]}_{uploaded_file.name.rsplit('.', 1)[0][:20]}"
-
-        # Save to database
-        prod_img = ProductImage(
+        prod_img = cls.create_pending_image(
             product=product,
+            uploaded_file=uploaded_file,
             is_primary=is_primary,
-            alt_text=alt_text or f"Fresh harvest {product.name}",
-            blur_placeholder=blur_placeholder,
-            width=pil_img.width,
-            height=pil_img.height,
+            alt_text=alt_text
         )
+        return cls.process_existing_image(prod_img)
 
-        prod_img.image.save(f"{filename_base}_full.webp", full_content, save=False)
-        prod_img.medium.save(f"{filename_base}_med.webp", medium_content, save=False)
-        prod_img.thumbnail.save(f"{filename_base}_thumb.webp", thumb_content, save=False)
-        prod_img.save()
-
-        return prod_img, quality_info
 

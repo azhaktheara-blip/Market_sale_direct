@@ -123,12 +123,24 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'config.wsgi.application'
 
-# Database
+# ------------------------------------------------------------------------------
+# Database & Connection Pooling Safety Note:
+# ------------------------------------------------------------------------------
+# If running this application across multiple worker processes, containers, or
+# autoscaled instances (e.g., Gunicorn workers, Celery nodes, horizontal replicas),
+# a dedicated connection pooler (such as PgBouncer, Supabase Pooler port 6543,
+# AWS RDS Proxy, or Render Managed Pooler) is REQUIRED.
+#
+# Reason: Django's `conn_max_age` setting maintains persistent connections
+# per-process; it does NOT share, deduplicate, or cap connections across processes.
+# N instances * M workers can rapidly exhaust PostgreSQL's `max_connections`
+# limit unless external connection pooling (transaction or session pooling) is utilized.
+# ------------------------------------------------------------------------------
 DATABASE_URL = os.getenv('DATABASE_URL', f"sqlite:///{BASE_DIR / 'db.sqlite3'}")
 DATABASES = {
     'default': dj_database_url.config(
         default=DATABASE_URL,
-        conn_max_age=600,
+        conn_max_age=int(os.getenv('CONN_MAX_AGE', '600')),
         conn_health_checks=True,
     )
 }
@@ -163,9 +175,68 @@ USE_TZ = True
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
-# Media files
+# Media & Object Storage Configuration
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
+
+AWS_STORAGE_BUCKET_NAME = os.getenv('AWS_STORAGE_BUCKET_NAME', '')
+
+if AWS_STORAGE_BUCKET_NAME:
+    # S3-Compatible Object Storage (AWS S3, Supabase Storage, Cloudflare R2, MinIO)
+    AWS_ACCESS_KEY_ID = os.getenv('AWS_ACCESS_KEY_ID', '')
+    AWS_SECRET_ACCESS_KEY = os.getenv('AWS_SECRET_ACCESS_KEY', '')
+    AWS_S3_REGION_NAME = os.getenv('AWS_S3_REGION_NAME', 'ap-southeast-1')
+    AWS_S3_ENDPOINT_URL = os.getenv('AWS_S3_ENDPOINT_URL', None)
+    AWS_S3_CUSTOM_DOMAIN = os.getenv('AWS_S3_CUSTOM_DOMAIN', None)
+    AWS_DEFAULT_ACL = os.getenv('AWS_DEFAULT_ACL', None)
+    AWS_QUERYSTRING_AUTH = os.getenv('AWS_QUERYSTRING_AUTH', 'False').lower() in ('true', '1')
+    AWS_S3_FILE_OVERWRITE = False
+
+    STORAGES = {
+        'default': {
+            'BACKEND': 'storages.backends.s3boto3.S3Boto3Storage',
+        },
+        'staticfiles': {
+            'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage',
+        },
+    }
+    DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
+    if AWS_S3_CUSTOM_DOMAIN:
+        MEDIA_URL = f"https://{AWS_S3_CUSTOM_DOMAIN}/"
+    elif AWS_STORAGE_BUCKET_NAME and not AWS_S3_ENDPOINT_URL:
+        MEDIA_URL = f"https://{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com/"
+else:
+    # Local development filesystem fallback
+    STORAGES = {
+        'default': {
+            'BACKEND': 'django.core.files.storage.FileSystemStorage',
+        },
+        'staticfiles': {
+            'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage',
+        },
+    }
+    DEFAULT_FILE_STORAGE = 'django.core.files.storage.FileSystemStorage'
+
+# Cache Configuration (Redis with LocMem fallback for local/test)
+IS_TESTING = 'test' in sys.argv
+REDIS_URL = os.getenv('REDIS_URL', '')
+
+if not IS_TESTING and REDIS_URL:
+    CACHES = {
+        'default': {
+            'BACKEND': 'django.core.cache.backends.redis.RedisCache',
+            'LOCATION': REDIS_URL,
+            'KEY_PREFIX': 'farmer_direct',
+        }
+    }
+else:
+    CACHES = {
+        'default': {
+            'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+            'LOCATION': 'farmer-direct-locmem-cache',
+            'KEY_PREFIX': 'farmer_direct',
+        }
+    }
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
@@ -356,3 +427,48 @@ LOGGING = {
         },
     },
 }
+
+# ------------------------------------------------------------------------------
+# Celery Async Task Queue & Periodic Beat Schedule
+# ------------------------------------------------------------------------------
+CELERY_BROKER_URL = os.getenv('CELERY_BROKER_URL', os.getenv('REDIS_URL', 'redis://127.0.0.1:6379/0'))
+CELERY_RESULT_BACKEND = os.getenv('CELERY_RESULT_BACKEND', os.getenv('REDIS_URL', 'redis://127.0.0.1:6379/0'))
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = TIME_ZONE
+CELERY_TASK_TRACK_STARTED = True
+CELERY_TASK_TIME_LIMIT = 30 * 60
+CELERY_TASK_ALWAYS_EAGER = IS_TESTING
+CELERY_TASK_EAGER_PROPAGATES = IS_TESTING
+
+# Celery Beat Schedule for Periodic Maintenance Tasks
+CELERY_BEAT_SCHEDULE = {
+    'cleanup-guest-carts-daily': {
+        'task': 'apps.cart.tasks.cleanup_expired_guest_carts',
+        'schedule': 86400.0,  # Run every 24 hours
+    },
+}
+
+# ------------------------------------------------------------------------------
+# Observability: Sentry Error Tracking & Performance Monitoring
+# ------------------------------------------------------------------------------
+SENTRY_DSN = os.getenv('SENTRY_DSN', '')
+if SENTRY_DSN:
+    import sentry_sdk
+    from sentry_sdk.integrations.django import DjangoIntegration
+    from sentry_sdk.integrations.celery import CeleryIntegration
+    from sentry_sdk.integrations.redis import RedisIntegration
+
+    sentry_sdk.init(
+        dsn=SENTRY_DSN,
+        integrations=[
+            DjangoIntegration(),
+            CeleryIntegration(),
+            RedisIntegration(),
+        ],
+        traces_sample_rate=float(os.getenv('SENTRY_TRACES_SAMPLE_RATE', '0.1')),
+        send_default_pii=False,
+        environment=os.getenv('ENVIRONMENT', 'production' if not DEBUG else 'development'),
+    )
+
