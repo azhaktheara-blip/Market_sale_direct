@@ -22,6 +22,8 @@ import { Button } from '../../components/common/Button';
 import { PageTransition } from '../../components/motion/PageTransition';
 import { StaggerContainer, StaggerItem } from '../../components/motion/StaggerContainer';
 import { OptimizedImage } from '../../components/common/OptimizedImage';
+import { AgriculturalHeroBackground } from '../../components/common/AgriculturalHeroBackground';
+import { AnimatedHeroProduceCard } from '../../components/cards/AnimatedHeroProduceCard';
 
 export const HomePage: React.FC = () => {
   const navigate = useNavigate();
@@ -74,9 +76,12 @@ export const HomePage: React.FC = () => {
 
   return (
     <PageTransition className="space-y-16 sm:space-y-24 pb-20">
-      {/* 1. HERO SECTION */}
-      <section className="relative overflow-hidden bg-gradient-to-b from-forest-50/80 via-emerald-50/30 to-stone-50 pt-12 sm:pt-20 pb-16 sm:pb-24 border-b border-stone-200/60">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      {/* 1. HERO SECTION WITH SEAMLESS CINEMATIC ANIMATED BACKGROUND */}
+      <section className="relative overflow-hidden pt-14 sm:pt-24 pb-20 sm:pb-28 border-b border-stone-200/60 min-h-[640px] flex items-center">
+        {/* Seamless 60 FPS Animated Background (Wind, Rice Fields, Mountains, Sunlight Rays, Drifting Leaves & Particles) */}
+        <AgriculturalHeroBackground overlayOpacity={0.62} />
+
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-20 w-full">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
             {/* Left Content */}
             <div className="lg:col-span-7 space-y-6 text-center lg:text-left">
@@ -84,79 +89,45 @@ export const HomePage: React.FC = () => {
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.3 }}
-                className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-forest-100/90 border border-forest-200 text-forest-800 text-xs font-bold uppercase tracking-wider shadow-xs"
+                className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-forest-100/90 border border-forest-200 text-forest-800 text-xs font-bold uppercase tracking-wider shadow-xs backdrop-blur-xs"
               >
                 <Sprout className="w-4 h-4 text-forest-600" />
                 <span>100% Farm-Direct Produce</span>
               </motion.div>
 
-              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black text-stone-900 leading-[1.08] font-display tracking-tight">
+              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black text-stone-900 leading-[1.08] font-display tracking-tight drop-shadow-xs">
                 Eat Healthier With <br className="hidden sm:block" />
                 <span className="text-forest-600">Fresh Local Harvests</span>
               </h1>
 
-              <p className="text-base sm:text-lg text-stone-600 max-w-xl mx-auto lg:mx-0 leading-relaxed font-normal">
+              <p className="text-base sm:text-lg text-stone-700 max-w-xl mx-auto lg:mx-0 leading-relaxed font-normal">
                 Skip the supermarket. Get organic vegetables, exotic fruits, and fresh dairy delivered straight from independent Cambodian farmers to your door within 24 hours of harvest.
               </p>
 
               <div className="pt-4 flex flex-col items-center lg:items-start gap-3">
                 <Link to="/products" className="w-full sm:w-auto">
-                  <Button variant="primary" size="lg" className="w-full sm:w-auto text-lg px-8 py-4 font-black shadow-lg shadow-forest-600/20 hover:shadow-forest-600/40 rounded-2xl transform hover:-translate-y-0.5 transition-all">
+                  <Button variant="primary" size="lg" className="w-full sm:w-auto text-lg px-8 py-4 font-black shadow-lg shadow-forest-600/25 hover:shadow-forest-600/40 rounded-2xl transform hover:-translate-y-0.5 transition-all bg-forest-600 hover:bg-forest-700 text-white">
                     Get Fresh Produce Now
                     <ArrowRight className="ml-2 w-5 h-5" />
                   </Button>
                 </Link>
-                <div className="flex items-center justify-center lg:justify-start gap-4 text-xs font-bold text-stone-500">
-                  <span className="flex items-center gap-1"><CheckCircle2 className="w-3.5 h-3.5 text-forest-500" /> Free Shipping Available</span>
-                  <span className="flex items-center gap-1"><ShieldCheck className="w-3.5 h-3.5 text-forest-500" /> 100% Fresh Guarantee</span>
+                <div className="flex items-center justify-center lg:justify-start gap-4 text-xs font-bold text-stone-600">
+                  <span className="flex items-center gap-1.5"><CheckCircle2 className="w-3.5 h-3.5 text-forest-600" /> Free Shipping Available</span>
+                  <span className="flex items-center gap-1.5"><ShieldCheck className="w-3.5 h-3.5 text-forest-600" /> 100% Fresh Guarantee</span>
                 </div>
               </div>
             </div>
 
-            {/* Right Visual Stage */}
+            {/* Right Visual Stage: Animated Produce Card with Living Motion */}
             <div className="lg:col-span-5 relative">
-              <div className="relative mx-auto max-w-md lg:max-w-none">
-                <div className="bg-white rounded-3xl p-4 shadow-soft-lg border border-stone-200/80 relative z-10">
-                  <div className="aspect-[4/3] rounded-2xl bg-gradient-to-br from-emerald-100 to-amber-100 overflow-hidden relative">
-                    <OptimizedImage
-                      src="https://images.unsplash.com/photo-1610348725531-843dff563e2c?auto=format&fit=crop&w=800&q=80"
-                      alt="Fresh agricultural harvest"
-                      priority="high"
-                      className="w-full h-full object-cover"
-                      containerClassName="w-full h-full"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-stone-900/60 via-transparent to-transparent" />
-                    <div className="absolute bottom-4 left-4 right-4 text-white">
-                      <span className="text-[10px] font-extrabold uppercase tracking-wider px-2.5 py-0.5 rounded-md bg-forest-600 text-white inline-block mb-1 shadow-xs">
-                        {t('hero.todays_harvest')}
-                      </span>
-                      <h4 className="text-sm font-bold">Organic Siem Reap Vine Tomatoes</h4>
-                      <p className="text-xs text-stone-200">$2.40 / kg • Sokha Green Farm</p>
-                    </div>
-                  </div>
-
-                  {/* Single Floating Hero Trust Card */}
-                  <div className="mt-4 p-3.5 bg-stone-50 rounded-2xl border border-stone-100 flex items-center justify-between">
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-9 h-9 rounded-xl bg-forest-100 text-forest-700 flex items-center justify-center font-bold text-sm">
-                        <Sparkles className="w-4 h-4" />
-                      </div>
-                      <div>
-                        <p className="text-xs font-bold text-stone-900">{t('hero.direct_guarantee')}</p>
-                        <p className="text-[11px] text-stone-500">{t('hero.direct_guarantee_sub')}</p>
-                      </div>
-                    </div>
-                    <Link to="/products">
-                      <Button variant="primary" size="sm" className="text-xs rounded-xl font-bold">
-                        {t('hero.shop_now')}
-                      </Button>
-                    </Link>
-                  </div>
-                </div>
-
-                {/* Ambient Blur Backing */}
-                <div className="absolute -inset-4 bg-forest-200/40 rounded-full blur-2xl -z-10" />
-              </div>
+              <AnimatedHeroProduceCard
+                imageSrc="https://images.unsplash.com/photo-1610348725531-843dff563e2c?auto=format&fit=crop&w=1200&q=85"
+                badgeText={t('hero.todays_harvest') || 'FEATURED HARVEST'}
+                title="Organic Siem Reap Vine Tomatoes"
+                subtitle="$2.40 / kg • Sokha Green Farm"
+                dispatchTitle={t('hero.direct_guarantee') || 'Direct Farm Dispatch'}
+                dispatchSub={t('hero.direct_guarantee_sub') || 'Zero middleman cold warehouses'}
+              />
             </div>
           </div>
         </div>
