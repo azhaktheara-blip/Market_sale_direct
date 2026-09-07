@@ -58,8 +58,8 @@ class VerifyPaymentView(APIView):
 class ABAPayWayWebhookView(APIView):
     """
     Webhook receiver for ABA PayWay pushback notifications.
-    Reconciles transaction with Check Transaction API before marking completed.
-    Guarantees idempotency via ProcessedWebhook records.
+    Validates HMAC signature fail-closed, prevents replay attacks atomically,
+    and settles payment and order upon authoritative verification.
     """
     permission_classes = [permissions.AllowAny]
     throttle_classes = [PaymentRateThrottle]
@@ -70,30 +70,48 @@ class ABAPayWayWebhookView(APIView):
         if not tran_id:
             return Response({'detail': 'Missing tran_id parameter.'}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Idempotency check
+        # Replay / Idempotency check: return 200 if already processed
         if ProcessedWebhook.objects.filter(provider='ABA_PAYWAY', event_id=tran_id).exists():
             logger.info("Webhook event for tran_id=%s has already been processed.", tran_id)
-            return Response({'status': 'already_processed', 'message': 'Duplicate event ignored.'})
+            return Response({'status': 'already_processed', 'message': 'Duplicate event ignored.'}, status=status.HTTP_200_OK)
+
+        signature = (
+            request.headers.get('X-PayWay-Signature')
+            or request.headers.get('X-Signature')
+            or request.data.get('hash')
+            or request.POST.get('hash')
+            or ''
+        )
+
+        if not signature:
+            logger.warning("ABA PayWay webhook rejected: missing signature header/field.")
+            return Response({'detail': 'Missing webhook signature.'}, status=status.HTTP_401_UNAUTHORIZED)
 
         try:
-            payment = Payment.objects.select_related('order').get(transaction_id=tran_id)
+            payment = Payment.objects.get(transaction_id=tran_id)
         except Payment.DoesNotExist:
             logger.warning("Payment with transaction_id=%s not found in system.", tran_id)
             return Response({'detail': 'Payment not found.'}, status=status.HTTP_404_NOT_FOUND)
 
-        with transaction.atomic():
-            success = PaymentService.verify_payment(payment)
-            if success:
-                ProcessedWebhook.objects.get_or_create(
-                    provider='ABA_PAYWAY',
-                    event_id=tran_id,
-                    defaults={'payload_hash': str(hash(tran_id))}
-                )
+        from .services import PaymentSettlementError, WebhookSignatureVerificationError
 
-        return Response({
-            'status': 'success' if success else 'unverified',
-            'payment_status': payment.status
-        })
+        try:
+            settled_payment = PaymentService.settle_payment(
+                payment_id=payment.id,
+                raw_payload=request.data,
+                signature=signature
+            )
+            return Response({
+                'status': 'success',
+                'payment_status': settled_payment.status
+            }, status=status.HTTP_200_OK)
+        except WebhookSignatureVerificationError as e:
+            logger.error("Webhook signature verification error: %s", e)
+            return Response({'detail': str(e)}, status=status.HTTP_401_UNAUTHORIZED)
+        except PaymentSettlementError as e:
+            logger.error("Payment settlement failed: %s", e)
+            return Response({'detail': str(e)}, status=status.HTTP_422_UNPROCESSABLE_ENTITY)
+
 
 
 @extend_schema(tags=['Payments'])

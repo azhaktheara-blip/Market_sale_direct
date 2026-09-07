@@ -1,11 +1,18 @@
 from decimal import Decimal
+from unittest.mock import patch
 from django.test import TestCase, override_settings
 from django.contrib.auth import get_user_model
+from django.utils import timezone
 from rest_framework.test import APIClient
 from rest_framework import status
+from apps.accounts.models import Address
 from apps.orders.models import Order
+from apps.orders.services import OrderService
 from apps.farmers.models import FarmerProfile
-from .models import Payment
+from apps.products.models import Category, Product, Inventory
+from apps.cart.models import Cart, CartItem
+from .models import Payment, PaymentTransaction, ProcessedWebhook
+from .services import PaymentService, PaymentSettlementError, WebhookSignatureVerificationError, ABAPayWayGateway
 from .payway_client import PayWayClient
 
 User = get_user_model()
@@ -72,23 +79,121 @@ class PaymentSecurityTests(TestCase):
         sig = client.get_hash(raw_str)
         self.assertTrue(len(sig) > 20)
 
-from django.test import TestCase
-from django.contrib.auth import get_user_model
-from rest_framework.test import APIClient
-from rest_framework import status
-from decimal import Decimal
-from django.utils import timezone
-from apps.accounts.models import Address
-from apps.farmers.models import FarmerProfile
-from apps.products.models import Category, Product, Inventory
-from apps.cart.models import Cart, CartItem
-from apps.orders.services import OrderService
-from apps.orders.models import Order
-from apps.payments.models import Payment
+    def test_unsigned_webhook_leaves_payment_pending(self):
+        payment = Payment.objects.create(
+            order=self.order,
+            payment_method=Order.PaymentMethod.BAKONG_QR,
+            amount=self.order.total,
+            status=Payment.Status.PENDING,
+            transaction_id='ABA-FD-TEST-9901'
+        )
+        payload = {
+            'tran_id': payment.transaction_id,
+            'amount': str(payment.amount),
+            'req_time': '20260907090000',
+            'merchant_id': 'ec478104',
+        }
+        # Call webhook without signature header or hash field
+        response = self.client.post('/api/v1/payments/webhooks/aba-payway/', payload)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        payment.refresh_from_db()
+        self.assertEqual(payment.status, Payment.Status.PENDING)
+        self.assertEqual(ProcessedWebhook.objects.filter(event_id=payment.transaction_id).count(), 0)
 
-User = get_user_model()
+    @override_settings(ABA_PAYWAY_MERCHANT_ID='ec478104', ABA_PAYWAY_API_KEY='test-secret-key')
+    @patch.object(ABAPayWayGateway, 'verify_payment', return_value=True)
+    def test_replayed_tran_id_does_not_duplicate_transaction(self, mock_verify):
+        payment = Payment.objects.create(
+            order=self.order,
+            payment_method=Order.PaymentMethod.BAKONG_QR,
+            amount=self.order.total,
+            status=Payment.Status.PENDING,
+            transaction_id='ABA-FD-REPLAY-01'
+        )
+        req_time = '20260907100000'
+        raw_str = f"{req_time}ec478104{payment.transaction_id}{payment.amount:.2f}"
+        sig = ABAPayWayGateway.get_hash(raw_str, 'test-secret-key')
+        payload = {
+            'tran_id': payment.transaction_id,
+            'amount': f"{payment.amount:.2f}",
+            'req_time': req_time,
+            'merchant_id': 'ec478104',
+            'hash': sig,
+        }
 
-class PaymentSecurityTests(TestCase):
+        # First webhook delivery
+        resp1 = self.client.post('/api/v1/payments/webhooks/aba-payway/', payload)
+        self.assertEqual(resp1.status_code, status.HTTP_200_OK)
+        payment.refresh_from_db()
+        self.assertEqual(payment.status, Payment.Status.COMPLETED)
+        self.assertEqual(PaymentTransaction.objects.filter(order=self.order).count(), 1)
+
+        # Replayed webhook delivery
+        resp2 = self.client.post('/api/v1/payments/webhooks/aba-payway/', payload)
+        self.assertEqual(resp2.status_code, status.HTTP_200_OK)
+        self.assertEqual(resp2.data.get('status'), 'already_processed')
+        self.assertEqual(PaymentTransaction.objects.filter(order=self.order).count(), 1)
+
+    @override_settings(ABA_PAYWAY_MERCHANT_ID='ec478104', ABA_PAYWAY_API_KEY='test-secret-key')
+    def test_amount_mismatch_does_not_settle(self):
+        payment = Payment.objects.create(
+            order=self.order,
+            payment_method=Order.PaymentMethod.BAKONG_QR,
+            amount=self.order.total,  # $12.00
+            status=Payment.Status.PENDING,
+            transaction_id='ABA-FD-MISMATCH-01'
+        )
+        req_time = '20260907100000'
+        # Attacker reports $1.00 instead of $12.00
+        tampered_amount = '1.00'
+        raw_str = f"{req_time}ec478104{payment.transaction_id}{tampered_amount}"
+        sig = ABAPayWayGateway.get_hash(raw_str, 'test-secret-key')
+        payload = {
+            'tran_id': payment.transaction_id,
+            'amount': tampered_amount,
+            'req_time': req_time,
+            'merchant_id': 'ec478104',
+            'hash': sig,
+        }
+
+        response = self.client.post('/api/v1/payments/webhooks/aba-payway/', payload)
+        self.assertEqual(response.status_code, status.HTTP_422_UNPROCESSABLE_ENTITY)
+        payment.refresh_from_db()
+        self.assertEqual(payment.status, Payment.Status.PENDING)
+        self.assertEqual(PaymentTransaction.objects.filter(order=self.order).count(), 0)
+
+    def test_bakong_verify_payment_fails_closed_without_gateway_confirmation(self):
+        payment = Payment.objects.create(
+            order=self.order,
+            payment_method=Order.PaymentMethod.BAKONG_QR,
+            amount=self.order.total,
+            status=Payment.Status.PENDING,
+            transaction_id='KHQR-RAW-001'
+        )
+        result = PaymentService.verify_payment(payment)
+        self.assertFalse(result)
+        payment.refresh_from_db()
+        self.assertEqual(payment.status, Payment.Status.PENDING)
+
+    @override_settings(DEBUG=True)
+    @patch('apps.payments.payway_client.PayWayClient.check_transaction')
+    def test_aba_payway_status_minus_one_does_not_settle_even_in_debug(self, mock_check):
+        mock_check.return_value = {'status': -1, 'description': 'Timeout or connection failed'}
+        payment = Payment.objects.create(
+            order=self.order,
+            payment_method=Order.PaymentMethod.BAKONG_QR,
+            amount=self.order.total,
+            status=Payment.Status.PENDING,
+            transaction_id='ABA-DEBUG-FAIL'
+        )
+        result = PaymentService.verify_payment(payment)
+        self.assertFalse(result)
+        payment.refresh_from_db()
+        self.assertEqual(payment.status, Payment.Status.PENDING)
+
+
+
+class PaymentFlowTests(TestCase):
     def setUp(self):
         self.client = APIClient()
         self.category = Category.objects.create(name='Roots', slug='roots-pay')

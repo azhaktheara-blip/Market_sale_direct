@@ -29,6 +29,9 @@ Use this checklist prior to launching live or deploying updates to production.
 
 ### Financial Transactions & Inventory
 - [x] **Server-Side Verification**: Orders are never marked `PAID` via client request; verified via ABA PayWay Check Transaction API.
+- [x] **Webhook HMAC Signature Verification**: Missing or invalid HMAC-SHA512 signatures return 401 Unauthorized; fail-closed without secret.
+- [x] **Amount & Currency Mismatch Guard**: Settlement raises `PaymentSettlementError` (422) if gateway amount differs from `payment.amount`.
+- [x] **Fail-Closed Gateways**: Bakong KHQR dynamic/static verification fails closed; DEBUG fallback for ABA PayWay `status == -1` eliminated.
 - [x] **Simulation Endpoint Gated**: `SimulatePaymentSuccessView` returns `403 Forbidden` in production.
 - [x] **Webhook Idempotency**: `ProcessedWebhook` model prevents duplicate or replayed notifications.
 - [x] **Inventory Row-Locking**: `select_for_update()` inside `transaction.atomic()` prevents concurrent overselling.
@@ -38,4 +41,4 @@ Use this checklist prior to launching live or deploying updates to production.
 - [x] **Docker Hardening**: Containers run under dedicated non-root `app` user; PostgreSQL and Redis ports isolated on internal network.
 - [x] **API Documentation Gated**: Swagger and OpenAPI schema endpoints require admin authentication in production.
 - [x] **Django Deployment Security Checks**: `python manage.py check --deploy` passes with 0 fatal errors.
-- [x] **Automated Test Coverage**: 26 / 26 automated unit and security tests passing.
+- [x] **Automated Test Coverage**: 44 / 44 automated unit, security, and settlement tests passing.

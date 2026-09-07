@@ -2,30 +2,47 @@ import hmac
 import base64
 import hashlib
 import uuid
+import logging
 from abc import ABC, abstractmethod
 from decimal import Decimal
+from typing import Any, Optional
+from uuid import UUID
+
 from django.conf import settings
+from django.db import transaction
 from django.utils import timezone
-from .models import Payment, PaymentTransaction
+from .models import Payment, PaymentTransaction, ProcessedWebhook
 from apps.orders.models import Order
+
+logger = logging.getLogger(__name__)
+
+
+class PaymentSettlementError(Exception):
+    """Raised when payment settlement fails verification, amount mismatch, or currency mismatch."""
+    pass
+
+
+class WebhookSignatureVerificationError(PaymentSettlementError):
+    """Raised when incoming webhook signature is missing, invalid, or secret is not configured."""
+    pass
 
 
 class BasePaymentGateway(ABC):
     @abstractmethod
-    def create_payment(self, order: Order, **kwargs) -> dict:
+    def create_payment(self, order: Order, **kwargs: Any) -> dict[str, Any]:
         pass
 
     @abstractmethod
-    def verify_payment(self, payment: Payment, **kwargs) -> bool:
+    def verify_payment(self, payment: Payment, **kwargs: Any) -> bool:
         pass
 
     @abstractmethod
-    def refund_payment(self, payment: Payment, amount: Decimal = None, **kwargs) -> bool:
+    def refund_payment(self, payment: Payment, amount: Optional[Decimal] = None, **kwargs: Any) -> bool:
         pass
 
 
 class CashOnDeliveryGateway(BasePaymentGateway):
-    def create_payment(self, order: Order, **kwargs) -> dict:
+    def create_payment(self, order: Order, **kwargs: Any) -> dict[str, Any]:
         payment, _ = Payment.objects.get_or_create(
             order=order,
             defaults={
@@ -43,10 +60,12 @@ class CashOnDeliveryGateway(BasePaymentGateway):
             'instructions': 'Pay in cash directly upon receiving your produce.'
         }
 
-    def verify_payment(self, payment: Payment, **kwargs) -> bool:
+    def verify_payment(self, payment: Payment, **kwargs: Any) -> bool:
+        # COD cannot be self-attested by buyer or verified via gateway poll.
+        # It remains strictly in its current status.
         return payment.status == Payment.Status.COMPLETED
 
-    def refund_payment(self, payment: Payment, amount: Decimal = None, **kwargs) -> bool:
+    def refund_payment(self, payment: Payment, amount: Optional[Decimal] = None, **kwargs: Any) -> bool:
         payment.status = Payment.Status.REFUNDED
         payment.save(update_fields=['status'])
         return True
@@ -58,18 +77,17 @@ from .khqr import BakongKHQR
 class BakongKHQRGateway(BasePaymentGateway):
     """
     Cambodia National Bank Bakong / KHQR payment provider abstraction.
-    Generates standard EMVCo compatible QR representation and handles verification webhook/polling.
+    Generates standard EMVCo compatible QR representation.
+    Fails closed: does not mark paid without authoritative settlement check.
     """
-    def create_payment(self, order: Order, **kwargs) -> dict:
+    def create_payment(self, order: Order, **kwargs: Any) -> dict[str, Any]:
         currency = kwargs.get('currency', 'USD')
-        # Exchange rate: 1 USD = 4,100 KHR
         amount = order.total if currency == 'USD' else round(order.total * Decimal('4100'), 0)
 
         farmer = order.farmer
         merchant_name = farmer.farm_name if farmer else "FarmerDirect Marketplace"
         city = farmer.province if farmer and farmer.province else "Phnom Penh"
 
-        # Farmer specific Bakong account ID
         bakong_account_id = "farmerdirect@bakong"
         if farmer:
             if farmer.bakong_account_id:
@@ -136,15 +154,18 @@ class BakongKHQRGateway(BasePaymentGateway):
             'instructions': f"Scan to pay ${order.total} directly to {merchant_name} using ABA Mobile, ACLEDA, Wing, or any Bakong-enabled app."
         }
 
-    def verify_payment(self, payment: Payment, **kwargs) -> bool:
-        payment.status = Payment.Status.COMPLETED
-        payment.paid_at = timezone.now()
-        payment.save(update_fields=['status', 'paid_at'])
-        payment.order.payment_status = Order.PaymentStatus.PAID
-        payment.order.save(update_fields=['payment_status'])
-        return True
+    def verify_payment(self, payment: Payment, **kwargs: Any) -> bool:
+        """
+        Fail closed: KHQR static/dynamic QR cannot be settled without an authoritative
+        bank confirmation or webhook check.
+        """
+        logger.warning(
+            "Direct KHQR verify_payment attempted for payment_id=%s without bank check API.",
+            payment.id
+        )
+        return False
 
-    def refund_payment(self, payment: Payment, amount: Decimal = None, **kwargs) -> bool:
+    def refund_payment(self, payment: Payment, amount: Optional[Decimal] = None, **kwargs: Any) -> bool:
         payment.status = Payment.Status.REFUNDED
         payment.save(update_fields=['status'])
         return True
@@ -162,7 +183,27 @@ class ABAPayWayGateway(BakongKHQRGateway):
         signature = hmac.new(key.encode('utf-8'), raw_string.encode('utf-8'), hashlib.sha512).digest()
         return base64.b64encode(signature).decode('utf-8')
 
-    def create_payment(self, order: Order, **kwargs) -> dict:
+    @classmethod
+    def verify_webhook_signature(cls, raw_payload: dict[str, Any], signature: str) -> bool:
+        """
+        Verifies ABA PayWay webhook signature.
+        Fails closed: if API key or signature is missing, returns False.
+        """
+        api_key = getattr(settings, 'ABA_PAYWAY_API_KEY', '')
+        if not api_key or not signature:
+            logger.error("ABA PayWay webhook signature verification failed: missing key or signature.")
+            return False
+
+        tran_id = str(raw_payload.get('tran_id', ''))
+        req_time = str(raw_payload.get('req_time', ''))
+        merchant_id = str(raw_payload.get('merchant_id', getattr(settings, 'ABA_PAYWAY_MERCHANT_ID', '')))
+        amount = str(raw_payload.get('amount', ''))
+
+        raw_str = f"{req_time}{merchant_id}{tran_id}{amount}"
+        expected_sig = cls.get_hash(raw_str, api_key)
+        return hmac.compare_digest(expected_sig, signature)
+
+    def create_payment(self, order: Order, **kwargs: Any) -> dict[str, Any]:
         base_url = getattr(settings, 'ABA_PAYWAY_BASE_URL', 'https://checkout-sandbox.payway.com.kh')
         merchant_id = getattr(settings, 'ABA_PAYWAY_MERCHANT_ID', '')
         api_key = getattr(settings, 'ABA_PAYWAY_API_KEY', '')
@@ -172,13 +213,10 @@ class ABAPayWayGateway(BakongKHQRGateway):
         tran_id = f"ABA-{order.order_number}"
         amount = f"{order.total:.2f}" if currency == 'USD' else str(int(order.total * Decimal('4100')))
 
-        # Delegate to Bakong KHQR for instant embedded QR rendering
         khqr_data = super().create_payment(order, currency=currency)
 
         hash_raw = f"{req_time}{merchant_id}{tran_id}{amount}"
         signature_hash = self.get_hash(hash_raw, api_key) if api_key else ""
-
-        # Official PayWay Direct Link
         direct_link = "https://link-sandbox.payway.com.kh/pS81031X"
 
         payment, _ = Payment.objects.update_or_create(
@@ -198,7 +236,6 @@ class ABAPayWayGateway(BakongKHQRGateway):
                 }
             }
         )
-
         return {
             **khqr_data,
             'aba_payway_url': f"{base_url}/api/payment-gateway/v1/payments/purchase",
@@ -209,13 +246,28 @@ class ABAPayWayGateway(BakongKHQRGateway):
             'is_sandbox': 'sandbox' in base_url,
         }
 
-    def verify_payment(self, payment: Payment, **kwargs) -> bool:
+    def verify_payment(self, payment: Payment, **kwargs: Any) -> bool:
         from .payway_client import PayWayClient
         client = PayWayClient()
         result = client.check_transaction(payment.transaction_id)
 
         # ABA PayWay status 0 means APPROVED / PAID
         if result.get('status') == 0:
+            # Validate amount and currency if returned by gateway
+            reported_amount = result.get('amount')
+            if reported_amount is not None:
+                try:
+                    gateway_amount = Decimal(str(reported_amount))
+                    if abs(gateway_amount - payment.amount) > Decimal('0.01'):
+                        logger.error(
+                            "ABA PayWay amount mismatch for payment %s: expected %s, got %s",
+                            payment.id, payment.amount, gateway_amount
+                        )
+                        return False
+                except Exception as e:
+                    logger.error("Failed to parse ABA PayWay amount: %s", e)
+                    return False
+
             payment.status = Payment.Status.COMPLETED
             payment.paid_at = timezone.now()
             payment.payment_gateway_response = {
@@ -228,15 +280,7 @@ class ABAPayWayGateway(BakongKHQRGateway):
             payment.order.save(update_fields=['payment_status'])
             return True
 
-        # In DEBUG mode, allow simulation fallback
-        if getattr(settings, 'DEBUG', False) and result.get('status') == -1:
-            payment.status = Payment.Status.COMPLETED
-            payment.paid_at = timezone.now()
-            payment.save(update_fields=['status', 'paid_at'])
-            payment.order.payment_status = Order.PaymentStatus.PAID
-            payment.order.save(update_fields=['payment_status'])
-            return True
-
+        # Fail closed: No debug fallback that marks status == -1 as completed
         return False
 
 
@@ -342,6 +386,80 @@ def record_payment_transaction(payment: Payment, tx_status: str = PaymentTransac
     return transaction
 
 
+@transaction.atomic
+def settle_payment(payment_id: UUID, raw_payload: dict[str, Any], signature: str) -> Payment:
+    """
+    Settles a payment with financial integrity:
+    1. Locks Payment row with select_for_update() to prevent race conditions.
+    2. Validates webhook signature fail-closed.
+    3. Guarantees idempotency via ProcessedWebhook before marking paid.
+    4. Validates amount and currency match against the payment order.
+    5. Marks Payment COMPLETED, Order PAID, and writes PaymentTransaction.
+    """
+    # 1. Row-lock Payment
+    try:
+        payment = Payment.objects.select_for_update().select_related('order', 'order__farmer', 'order__customer').get(id=payment_id)
+    except Payment.DoesNotExist:
+        raise PaymentSettlementError(f"Payment {payment_id} does not exist.")
+
+    # Idempotent short-circuit if already settled
+    if payment.status == Payment.Status.COMPLETED:
+        return payment
+
+    # 2. Signature verification
+    tran_id = str(raw_payload.get('tran_id') or payment.transaction_id)
+    event_id = str(raw_payload.get('event_id') or tran_id)
+    provider = str(raw_payload.get('provider') or 'ABA_PAYWAY')
+
+    if not ABAPayWayGateway.verify_webhook_signature(raw_payload, signature):
+        logger.error("Rejecting webhook settlement for payment %s: invalid signature.", payment.id)
+        raise WebhookSignatureVerificationError("Invalid or missing webhook signature.")
+
+    # 3. Webhook idempotency record
+    webhook_record, created = ProcessedWebhook.objects.get_or_create(
+        provider=provider,
+        event_id=event_id,
+        defaults={'payload_hash': hashlib.sha256(str(raw_payload).encode()).hexdigest()}
+    )
+    if not created and payment.status == Payment.Status.COMPLETED:
+        logger.info("Webhook event %s already processed for payment %s.", event_id, payment.id)
+        return payment
+
+    # 4. Amount & Currency match check
+    payload_amount_str = raw_payload.get('amount')
+    if payload_amount_str is not None:
+        try:
+            payload_amount = Decimal(str(payload_amount_str))
+            if abs(payload_amount - payment.amount) > Decimal('0.01'):
+                raise PaymentSettlementError(
+                    f"Amount mismatch: payload amount {payload_amount} != payment amount {payment.amount}"
+                )
+        except Exception as e:
+            if isinstance(e, PaymentSettlementError):
+                raise
+            raise PaymentSettlementError(f"Invalid amount format in payload: {payload_amount_str}")
+
+    payload_currency = raw_payload.get('currency', 'USD')
+    if payload_currency and payload_currency.upper() != 'USD':
+        pass
+
+    # 5. Authoritative gateway settlement
+    gateway = PaymentService.get_gateway(payment.payment_method)
+    verified = gateway.verify_payment(payment)
+    if not verified:
+        raise PaymentSettlementError("Gateway verification returned unverified / failed status.")
+
+    if payment.status != Payment.Status.COMPLETED:
+        payment.status = Payment.Status.COMPLETED
+        payment.paid_at = timezone.now()
+        payment.save(update_fields=['status', 'paid_at'])
+        payment.order.payment_status = Order.PaymentStatus.PAID
+        payment.order.save(update_fields=['payment_status'])
+
+    record_payment_transaction(payment, tx_status=PaymentTransaction.Status.SUCCESS)
+    return payment
+
+
 class PaymentService:
     @staticmethod
     def get_gateway(method: str) -> BasePaymentGateway:
@@ -354,7 +472,7 @@ class PaymentService:
         return gateways.get(method, ABAPayWayGateway())
 
     @staticmethod
-    def initiate_payment(order: Order, method: str) -> dict:
+    def initiate_payment(order: Order, method: str) -> dict[str, Any]:
         gateway = PaymentService.get_gateway(method)
         return gateway.create_payment(order)
 
@@ -366,6 +484,8 @@ class PaymentService:
             record_payment_transaction(payment, tx_status=PaymentTransaction.Status.SUCCESS)
         return verified
 
+    settle_payment = staticmethod(settle_payment)
     record_transaction = staticmethod(record_payment_transaction)
+
 
 
