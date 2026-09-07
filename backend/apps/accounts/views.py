@@ -21,6 +21,7 @@ from .serializers import (
 )
 from .utils import send_verification_email, verify_user_token
 from apps.core.permissions import IsOwnerOrAdmin
+from apps.core.throttling import AuthRateThrottle
 
 logger = logging.getLogger(__name__)
 User = get_user_model()
@@ -28,18 +29,20 @@ User = get_user_model()
 
 @extend_schema(tags=['Authentication'])
 class CustomTokenObtainPairView(TokenObtainPairView):
+    throttle_classes = [AuthRateThrottle]
     serializer_class = CustomTokenObtainPairSerializer
 
 
 @extend_schema(tags=['Authentication'])
 class CustomTokenRefreshView(TokenRefreshView):
-    pass
+    throttle_classes = [AuthRateThrottle]
 
 
 @extend_schema(tags=['Authentication'])
 class RegisterView(generics.CreateAPIView):
     queryset = User.objects.all()
     permission_classes = [permissions.AllowAny]
+    throttle_classes = [AuthRateThrottle]
     serializer_class = RegisterSerializer
 
     def create(self, request, *args, **kwargs):
@@ -80,6 +83,7 @@ class VerifyEmailView(APIView):
     Upon successful verification, marks account active and issues JWT tokens.
     """
     permission_classes = [permissions.AllowAny]
+    throttle_classes = [AuthRateThrottle]
 
     def post(self, request):
         serializer = VerifyEmailSerializer(data=request.data)
@@ -121,6 +125,7 @@ class ResendVerificationEmailView(APIView):
     Does not leak whether the email is registered to prevent account enumeration.
     """
     permission_classes = [permissions.AllowAny]
+    throttle_classes = [AuthRateThrottle]
 
     def post(self, request):
         serializer = ResendVerificationSerializer(data=request.data)
@@ -147,6 +152,7 @@ class GoogleAuthView(APIView):
     Auto-creates customer accounts with email_verified=True and returns JWT tokens.
     """
     permission_classes = [permissions.AllowAny]
+    throttle_classes = [AuthRateThrottle]
 
     def post(self, request):
         serializer = GoogleAuthSerializer(data=request.data)

@@ -3,16 +3,22 @@ from .models import FarmerProfile, FarmerVerification
 
 
 class FarmerSummarySerializer(serializers.ModelSerializer):
-    account_id = serializers.CharField(read_only=True)
+    account_id = serializers.SerializerMethodField()
 
     class Meta:
         model = FarmerProfile
         fields = ['id', 'account_id', 'farm_name', 'slug', 'province', 'is_verified', 'verification_status', 'profile_image', 'rating_avg']
 
+    def get_account_id(self, obj):
+        request = self.context.get('request')
+        if request and request.user.is_authenticated:
+            if request.user.is_staff or getattr(request.user, 'role', '') == 'ADMIN' or getattr(obj, 'user_id', None) == request.user.id:
+                return obj.account_id
+        return None
 
 
 class FarmerPublicListSerializer(serializers.ModelSerializer):
-    account_id = serializers.CharField(read_only=True)
+    account_id = serializers.SerializerMethodField()
     product_count = serializers.SerializerMethodField()
 
     class Meta:
@@ -26,12 +32,19 @@ class FarmerPublicListSerializer(serializers.ModelSerializer):
             'created_at'
         ]
 
+    def get_account_id(self, obj):
+        request = self.context.get('request')
+        if request and request.user.is_authenticated:
+            if request.user.is_staff or getattr(request.user, 'role', '') == 'ADMIN' or getattr(obj, 'user_id', None) == request.user.id:
+                return obj.account_id
+        return None
+
     def get_product_count(self, obj):
         return obj.products.filter(status='ACTIVE').count()
 
 
 class FarmerPublicDetailSerializer(serializers.ModelSerializer):
-    account_id = serializers.CharField(read_only=True)
+    account_id = serializers.SerializerMethodField()
     product_count = serializers.SerializerMethodField()
     products = serializers.SerializerMethodField()
 
@@ -46,6 +59,13 @@ class FarmerPublicDetailSerializer(serializers.ModelSerializer):
             'rating_avg', 'rating_count', 'product_count', 'products',
             'created_at'
         ]
+
+    def get_account_id(self, obj):
+        request = self.context.get('request')
+        if request and request.user.is_authenticated:
+            if request.user.is_staff or getattr(request.user, 'role', '') == 'ADMIN' or getattr(obj, 'user_id', None) == request.user.id:
+                return obj.account_id
+        return None
 
     def get_product_count(self, obj):
         return obj.products.filter(status='ACTIVE').count()

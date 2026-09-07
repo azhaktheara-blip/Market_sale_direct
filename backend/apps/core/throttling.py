@@ -1,11 +1,18 @@
 from rest_framework.throttling import AnonRateThrottle, UserRateThrottle, SimpleRateThrottle
 
 
-class AuthRateThrottle(AnonRateThrottle):
+class AuthRateThrottle(SimpleRateThrottle):
     """
     Stricter rate limiting for authentication endpoints (login, register, token refresh, verification).
+    Throttles by client IP address to prevent credential stuffing and brute-force attacks.
     """
     scope = 'auth'
+
+    def get_cache_key(self, request, view):
+        return self.cache_format % {
+            'scope': self.scope,
+            'ident': self.get_ident(request)
+        }
 
 
 class PaymentRateThrottle(UserRateThrottle):

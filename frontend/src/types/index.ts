@@ -142,6 +142,8 @@ export interface Product {
   images?: ProductImage[];
   inventory?: Inventory;
   available_stock?: string;
+  in_stock?: boolean;
+  stock_level?: 'low' | 'ok' | 'high' | 'out_of_stock';
   volume_tiers?: VolumeDiscountTier[];
   created_at: string;
   updated_at?: string;

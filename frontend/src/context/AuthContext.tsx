@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User } from '../types';
 import { authApi } from '../api';
+import { tokenStorage } from '../api/client';
 
 interface RegisterResponse {
   requires_verification?: boolean;
@@ -25,37 +26,42 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(() => {
-    const saved = localStorage.getItem('user');
-    return saved ? JSON.parse(saved) : null;
-  });
+  const [user, setUser] = useState<User | null>(() => tokenStorage.getUser<User>());
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
   useEffect(() => {
-    const token = localStorage.getItem('access_token');
-    if (token) {
-      authApi.getMe()
+    const refreshToken = tokenStorage.getRefreshToken();
+    if (refreshToken) {
+      // Exchange refresh token for fresh in-memory access token
+      authApi.refreshToken(refreshToken)
+        .then((res) => {
+          tokenStorage.setAccessToken(res.data.access);
+          if (res.data.refresh) {
+            tokenStorage.setRefreshToken(res.data.refresh);
+          }
+          return authApi.getMe();
+        })
         .then((res) => {
           setUser(res.data);
-          localStorage.setItem('user', JSON.stringify(res.data));
+          tokenStorage.setUser(res.data);
         })
         .catch(() => {
-          localStorage.removeItem('access_token');
-          localStorage.removeItem('refresh_token');
-          localStorage.removeItem('user');
+          tokenStorage.clearAll();
           setUser(null);
         })
         .finally(() => setIsLoading(false));
     } else {
+      tokenStorage.clearAll();
+      setUser(null);
       setIsLoading(false);
     }
   }, []);
 
   const login = async (email: string, password: string): Promise<User> => {
     const res = await authApi.login({ email, password });
-    localStorage.setItem('access_token', res.data.access);
-    localStorage.setItem('refresh_token', res.data.refresh);
-    localStorage.setItem('user', JSON.stringify(res.data.user));
+    tokenStorage.setAccessToken(res.data.access);
+    tokenStorage.setRefreshToken(res.data.refresh);
+    tokenStorage.setUser(res.data.user);
     setUser(res.data.user);
     return res.data.user;
   };
@@ -63,9 +69,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const register = async (data: Record<string, unknown> | FormData): Promise<RegisterResponse> => {
     const res = await authApi.register(data);
     if (res.data.tokens?.access && res.data.user) {
-      localStorage.setItem('access_token', res.data.tokens.access);
-      localStorage.setItem('refresh_token', res.data.tokens.refresh);
-      localStorage.setItem('user', JSON.stringify(res.data.user));
+      tokenStorage.setAccessToken(res.data.tokens.access);
+      tokenStorage.setRefreshToken(res.data.tokens.refresh);
+      tokenStorage.setUser(res.data.user);
       setUser(res.data.user);
     }
     return {
@@ -78,18 +84,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const googleLogin = async (idToken: string): Promise<User> => {
     const res = await authApi.googleAuth({ id_token: idToken });
-    localStorage.setItem('access_token', res.data.tokens.access);
-    localStorage.setItem('refresh_token', res.data.tokens.refresh);
-    localStorage.setItem('user', JSON.stringify(res.data.user));
+    tokenStorage.setAccessToken(res.data.tokens.access);
+    tokenStorage.setRefreshToken(res.data.tokens.refresh);
+    tokenStorage.setUser(res.data.user);
     setUser(res.data.user);
     return res.data.user;
   };
 
   const verifyEmail = async (uid: string, token: string): Promise<User> => {
     const res = await authApi.verifyEmail({ uid, token });
-    localStorage.setItem('access_token', res.data.tokens.access);
-    localStorage.setItem('refresh_token', res.data.tokens.refresh);
-    localStorage.setItem('user', JSON.stringify(res.data.user));
+    tokenStorage.setAccessToken(res.data.tokens.access);
+    tokenStorage.setRefreshToken(res.data.tokens.refresh);
+    tokenStorage.setUser(res.data.user);
     setUser(res.data.user);
     return res.data.user;
   };
@@ -100,15 +106,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const logout = () => {
-    localStorage.removeItem('access_token');
-    localStorage.removeItem('refresh_token');
-    localStorage.removeItem('user');
+    tokenStorage.clearAll();
     setUser(null);
   };
 
   const updateUser = (updatedUser: User) => {
     setUser(updatedUser);
-    localStorage.setItem('user', JSON.stringify(updatedUser));
+    tokenStorage.setUser(updatedUser);
   };
 
   return (

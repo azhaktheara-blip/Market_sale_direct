@@ -113,20 +113,34 @@ export const CheckoutPage: React.FC = () => {
       }
     },
     onError: (err: any) => {
-      const msg = err.response?.data?.message || err.response?.data?.errors?.detail || 'Checkout failed.';
-      setCheckoutError(msg);
+      const data = err.response?.data;
+      let msg = data?.message || data?.detail;
+      if (data?.errors && typeof data.errors === 'object') {
+        const errorEntries = Object.entries(data.errors).map(([field, errList]) => {
+          const formattedErr = Array.isArray(errList) ? errList.join(', ') : String(errList);
+          return `${field}: ${formattedErr}`;
+        });
+        if (errorEntries.length > 0) {
+          msg = `${msg ? msg + ' — ' : ''}${errorEntries.join(' | ')}`;
+        }
+      }
+      setCheckoutError(msg || 'Checkout failed.');
     },
   });
 
   const handleCreateAddress = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newRecipientName || !newPhone || !newStreet) return;
+    if (!newRecipientName || !newPhone || !newStreet) {
+      setCheckoutError('Please fill in Recipient Name, Phone Number, and Street Address.');
+      return;
+    }
+    setCheckoutError(null);
     addAddressMutation.mutate({
       label: 'Delivery Location',
       recipient_name: newRecipientName,
       phone_number: newPhone,
       province: newProvince,
-      district: newDistrict,
+      district: newDistrict || newProvince,
       street_address: newStreet,
       is_default: true,
     });
@@ -384,21 +398,82 @@ export const CheckoutPage: React.FC = () => {
             </div>
 
             <Button
-              onClick={() => {
+              onClick={async () => {
                 if (!selectedAddressId) {
-                  setIsAddressModalOpen(true);
+                  // If user filled in the inline form, save it first then checkout
+                  if (newRecipientName && newPhone && newStreet) {
+                    try {
+                      setCheckoutError(null);
+                      const res = await addressesApi.createAddress({
+                        label: 'Delivery Location',
+                        recipient_name: newRecipientName,
+                        phone_number: newPhone,
+                        province: newProvince,
+                        district: newDistrict || newProvince,
+                        street_address: newStreet,
+                        is_default: true,
+                      });
+                      queryClient.invalidateQueries({ queryKey: ['addresses'] });
+                      setSelectedAddressId(res.data.id);
+                      ordersApi.checkout({
+                        address_id: res.data.id,
+                        payment_method: paymentMethod,
+                        customer_notes: customerNotes,
+                      }).then((checkoutRes) => {
+                        refreshCart();
+                        const firstOrder = checkoutRes.data.orders[0];
+                        if (firstOrder) {
+                          setCreatedOrder({
+                            id: firstOrder.id,
+                            order_number: firstOrder.order_number,
+                            total: firstOrder.total,
+                          });
+                          if (paymentMethod === 'BAKONG_QR') {
+                            setIsBakongModalOpen(true);
+                          } else if (paymentMethod === 'CREDIT_CARD') {
+                            setIsCardModalOpen(true);
+                          } else {
+                            navigate('/customer/orders', {
+                              state: { newOrderSuccess: true, orderCount: checkoutRes.data.orders.length },
+                            });
+                          }
+                        } else {
+                          navigate('/customer/orders', {
+                            state: { newOrderSuccess: true, orderCount: checkoutRes.data.orders.length },
+                          });
+                        }
+                      }).catch((err) => {
+                        const data = err.response?.data;
+                        let msg = data?.message || data?.detail;
+                        if (data?.errors && typeof data.errors === 'object') {
+                          const errorEntries = Object.entries(data.errors).map(([field, errList]) => {
+                            const formattedErr = Array.isArray(errList) ? errList.join(', ') : String(errList);
+                            return `${field}: ${formattedErr}`;
+                          });
+                          if (errorEntries.length > 0) {
+                            msg = `${msg ? msg + ' — ' : ''}${errorEntries.join(' | ')}`;
+                          }
+                        }
+                        setCheckoutError(msg || 'Checkout failed.');
+                      });
+                    } catch (err: any) {
+                      setCheckoutError(err.response?.data?.message || 'Failed to save delivery address.');
+                    }
+                  } else {
+                    setIsAddressModalOpen(true);
+                  }
                 } else {
                   checkoutMutation.mutate();
                 }
               }}
-              isLoading={checkoutMutation.isPending}
-              disabled={checkoutMutation.isPending}
+              isLoading={checkoutMutation.isPending || addAddressMutation.isPending}
+              disabled={checkoutMutation.isPending || addAddressMutation.isPending}
               variant="primary"
               size="lg"
               className="w-full rounded-2xl font-bold"
               rightIcon={<ArrowRight className="w-4 h-4" />}
             >
-              {!selectedAddressId
+              {(!selectedAddressId && (!newRecipientName || !newPhone || !newStreet))
                 ? 'Add Delivery Address & Continue'
                 : `Place Order & Pay with ${paymentMethod === 'BAKONG_QR' ? 'KHQR' : paymentMethod === 'CREDIT_CARD' ? 'Card' : 'COD'} ($${cart.total})`}
             </Button>

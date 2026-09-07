@@ -1,0 +1,22 @@
+# https://www.robotstxt.org/robotstxt.html
+User-agent: *
+Allow: /$
+Allow: /products
+Allow: /products/*
+Allow: /farmers
+Allow: /farmers/*
+Allow: /map
+Allow: /calendar
+Allow: /radar
+Allow: /how-it-works
+Allow: /about
+
+# Disallow private accounts, checkout, and administrative routes
+Disallow: /customer/
+Disallow: /farmer/
+Disallow: /admin/
+Disallow: /login
+Disallow: /register
+Disallow: /verify-email
+
+Sitemap: https://market-sale-direct.vercel.app/sitemap.xml

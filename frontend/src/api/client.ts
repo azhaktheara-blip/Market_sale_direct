@@ -1,4 +1,7 @@
 import axios from 'axios';
+import { tokenStorage } from './tokenStorage';
+
+export { tokenStorage };
 
 const getApiBaseUrl = (): string => {
   const envUrl = import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL;
@@ -36,10 +39,10 @@ export const apiClient = axios.create({
   },
 });
 
-// Request Interceptor: Attach Access Token & Guest Session Key
+// Request Interceptor: Attach In-Memory Access Token & Guest Session Key
 apiClient.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('access_token');
+    const token = tokenStorage.getAccessToken();
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -89,7 +92,7 @@ apiClient.interceptors.response.use(
       originalRequest._retry = true;
       isRefreshing = true;
 
-      const refreshToken = localStorage.getItem('refresh_token');
+      const refreshToken = tokenStorage.getRefreshToken();
       if (!refreshToken) {
         isRefreshing = false;
         return Promise.reject(error);
@@ -100,10 +103,10 @@ apiClient.interceptors.response.use(
           refresh: refreshToken,
         });
         const newAccessToken = res.data.access;
-        localStorage.setItem('access_token', newAccessToken);
+        tokenStorage.setAccessToken(newAccessToken);
 
         if (res.data.refresh) {
-          localStorage.setItem('refresh_token', res.data.refresh);
+          tokenStorage.setRefreshToken(res.data.refresh);
         }
 
         apiClient.defaults.headers.common.Authorization = `Bearer ${newAccessToken}`;
@@ -111,9 +114,7 @@ apiClient.interceptors.response.use(
         return apiClient(originalRequest);
       } catch (refreshError) {
         processQueue(refreshError, null);
-        localStorage.removeItem('access_token');
-        localStorage.removeItem('refresh_token');
-        localStorage.removeItem('user');
+        tokenStorage.clearAll();
         return Promise.reject(refreshError);
       } finally {
         isRefreshing = false;

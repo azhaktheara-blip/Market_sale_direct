@@ -6,12 +6,18 @@ from .models import Address, CustomerProfile
 from apps.farmers.models import FarmerProfile
 from .utils import generate_verification_token
 
+from django.core.cache import cache
+
 User = get_user_model()
 
 
 class AccountsAuthTests(TestCase):
     def setUp(self):
+        cache.clear()
         self.client = APIClient()
+
+    def tearDown(self):
+        cache.clear()
 
     @override_settings(EMAIL_VERIFICATION_REQUIRED=True)
     def test_customer_registration_requires_verification_when_enabled(self):

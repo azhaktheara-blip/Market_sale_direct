@@ -1,4 +1,4 @@
-import { apiClient } from './client';
+import { apiClient, tokenStorage } from './client';
 import {
   User,
   Category,
@@ -37,6 +37,8 @@ export const authApi = {
     apiClient.post<{ status: string; message: string }>('/auth/resend-verification/', data),
   googleAuth: (data: { id_token: string }) =>
     apiClient.post<{ status: string; message: string; tokens: { access: string; refresh: string }; user: User }>('/auth/google/', data),
+  refreshToken: (refresh: string) =>
+    apiClient.post<{ access: string; refresh?: string }>('/auth/refresh/', { refresh }),
   getMe: () => apiClient.get<User>('/auth/me/'),
   updateProfile: (data: FormData | Record<string, unknown>) =>
     apiClient.patch<User>('/auth/me/', data, {
@@ -120,11 +122,11 @@ export const ordersApi = {
   
   // PDF Document Downloads
   getInvoicePdfUrl: (orderId: string) => {
-    const token = localStorage.getItem('access_token');
+    const token = tokenStorage.getAccessToken();
     return `${apiClient.defaults.baseURL}/orders/${orderId}/invoice/${token ? `?token=${encodeURIComponent(token)}` : ''}`;
   },
   getPackingSlipPdfUrl: (orderId: string) => {
-    const token = localStorage.getItem('access_token');
+    const token = tokenStorage.getAccessToken();
     return `${apiClient.defaults.baseURL}/orders/${orderId}/packing-slip/${token ? `?token=${encodeURIComponent(token)}` : ''}`;
   },
   downloadInvoicePdf: async (orderId: string, orderNumber: string) => {

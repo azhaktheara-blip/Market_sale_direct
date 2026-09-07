@@ -3,6 +3,7 @@ from decimal import Decimal
 from django.test import TestCase, override_settings
 from django.contrib.auth import get_user_model
 from django.utils import timezone
+from django.core.cache import cache
 from rest_framework.test import APIClient
 from rest_framework import status
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -26,6 +27,7 @@ class SecurityAuditTestSuite(TestCase):
     """
 
     def setUp(self):
+        cache.clear()
         self.client = APIClient()
 
         # Customer 1
@@ -102,6 +104,9 @@ class SecurityAuditTestSuite(TestCase):
             total=Decimal('15.00'),
             delivery_address_snapshot={'label': 'Home'}
         )
+
+    def tearDown(self):
+        cache.clear()
 
     # -------------------------------------------------------------
     # 1. AUTHENTICATION & JWT SECURITY
@@ -227,3 +232,179 @@ class SecurityAuditTestSuite(TestCase):
         })
         self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn('Stock conflict', str(res.data))
+
+    # -------------------------------------------------------------
+    # 5. PRODUCTION CORS & CSRF WHITELIST ENFORCEMENT
+    # -------------------------------------------------------------
+    @override_settings(
+        DEBUG=False,
+        CORS_ALLOWED_ORIGINS=['https://market-sale-direct.vercel.app'],
+        CORS_ALLOWED_ORIGIN_REGEXES=[]
+    )
+    def test_prod_cors_rejects_random_vercel_preview(self):
+        """Random preview deployments on *.vercel.app must not be allowed or reflected."""
+        attacker_origin = 'https://evil-preview.vercel.app'
+        response = self.client.get(
+            '/api/v1/products/',
+            HTTP_ORIGIN=attacker_origin
+        )
+        allow_origin = response.headers.get('Access-Control-Allow-Origin')
+        self.assertNotEqual(allow_origin, attacker_origin)
+        self.assertIsNone(allow_origin)
+
+    @override_settings(
+        DEBUG=False,
+        CORS_ALLOWED_ORIGINS=['https://market-sale-direct.vercel.app'],
+        CORS_ALLOWED_ORIGIN_REGEXES=[]
+    )
+    def test_prod_cors_allows_exact_frontend(self):
+        """Production frontend origin is reflected exactly once."""
+        trusted_origin = 'https://market-sale-direct.vercel.app'
+        response = self.client.get(
+            '/api/v1/products/',
+            HTTP_ORIGIN=trusted_origin
+        )
+        self.assertEqual(response.headers.get('Access-Control-Allow-Origin'), trusted_origin)
+
+    # -------------------------------------------------------------
+    # 6. SEED PASSWORD ROTATION COMMAND TESTS
+    # -------------------------------------------------------------
+    def test_reset_seed_passwords_refuses_without_env_var(self):
+        """Command must raise CommandError if ALLOW_SEED_RESET!=1."""
+        from django.core.management import call_command
+        from django.core.management.base import CommandError
+        import os
+
+        old_val = os.environ.pop('ALLOW_SEED_RESET', None)
+        try:
+            with self.assertRaises(CommandError) as ctx:
+                call_command('reset_seed_passwords')
+            self.assertIn("ALLOW_SEED_RESET=1", str(ctx.exception))
+        finally:
+            if old_val is not None:
+                os.environ['ALLOW_SEED_RESET'] = old_val
+
+    def test_reset_seed_passwords_rotates_passwords_when_allowed(self):
+        """Command randomizes passwords for seeded accounts when ALLOW_SEED_RESET=1."""
+        from django.core.management import call_command
+        import os
+
+        seeded_user = User.objects.create_user(
+            email='sokha.farm@farmerdirect.com',
+            username='sokha_test',
+            password='farmer123456',
+            role=User.Role.FARMER,
+        )
+        old_hash = seeded_user.password
+
+        os.environ['ALLOW_SEED_RESET'] = '1'
+        try:
+            call_command('reset_seed_passwords')
+            seeded_user.refresh_from_db()
+            self.assertNotEqual(seeded_user.password, old_hash)
+            self.assertFalse(seeded_user.check_password('farmer123456'))
+        finally:
+            os.environ.pop('ALLOW_SEED_RESET', None)
+
+    # -------------------------------------------------------------
+    # 7. HEALTH CHECK ENDPOINT TESTS
+    # -------------------------------------------------------------
+    def test_health_endpoint_returns_status_ok_only_without_route_map(self):
+        """Root and health endpoints must return status: ok only without route map."""
+        for path in ['/', '/health/']:
+            res = self.client.get(path)
+            self.assertEqual(res.status_code, status.HTTP_200_OK)
+            data = res.json()
+            self.assertEqual(data, {'status': 'ok'})
+            self.assertNotIn('api_v1_endpoints', data)
+            self.assertNotIn('service', data)
+            self.assertNotIn('version', data)
+
+    def test_robots_txt_disallows_all_crawlers_on_backend(self):
+        """Backend robots.txt must disallow all crawlers from scraping API and admin surfaces."""
+        res = self.client.get('/robots.txt')
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertIn('text/plain', res.headers.get('Content-Type', ''))
+        content = res.content.decode('utf-8')
+        self.assertIn('User-agent: *', content)
+        self.assertIn('Disallow: /', content)
+
+    # -------------------------------------------------------------
+    # 8. AUTH THROTTLING & ANTI-ACCOUNT ENUMERATION
+    # -------------------------------------------------------------
+    def test_login_returns_identical_error_for_unknown_email_vs_wrong_password(self):
+        """Unknown email and bad password must return identical 401 response to prevent user enumeration."""
+        res_unknown = self.client.post('/api/v1/auth/login/', {
+            'email': 'nonexistent_account_xyz@example.com',
+            'password': 'WrongPassword123!'
+        })
+        res_bad_pw = self.client.post('/api/v1/auth/login/', {
+            'email': self.customer1.email,
+            'password': 'WrongPassword123!'
+        })
+
+        self.assertEqual(res_unknown.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(res_bad_pw.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(res_unknown.json(), res_bad_pw.json())
+
+    def test_resend_verification_does_not_leak_email_existence(self):
+        """Resending verification must return identical 200 response whether email exists or not."""
+        res_unknown = self.client.post('/api/v1/auth/resend-verification/', {
+            'email': 'ghost_user_doesnt_exist@example.com'
+        })
+        res_known = self.client.post('/api/v1/auth/resend-verification/', {
+            'email': self.customer1.email
+        })
+
+        self.assertEqual(res_unknown.status_code, status.HTTP_200_OK)
+        self.assertEqual(res_known.status_code, status.HTTP_200_OK)
+        self.assertEqual(res_unknown.json(), res_known.json())
+
+    def test_auth_views_have_auth_rate_throttle_configured(self):
+        """All authentication endpoints must explicitly enforce AuthRateThrottle."""
+        from apps.core.throttling import AuthRateThrottle
+        from apps.accounts.views import (
+            CustomTokenObtainPairView,
+            CustomTokenRefreshView,
+            RegisterView,
+            VerifyEmailView,
+            ResendVerificationEmailView,
+            GoogleAuthView,
+        )
+
+        auth_views = [
+            CustomTokenObtainPairView,
+            CustomTokenRefreshView,
+            RegisterView,
+            VerifyEmailView,
+            ResendVerificationEmailView,
+            GoogleAuthView,
+        ]
+        for view_cls in auth_views:
+            self.assertIn(
+                AuthRateThrottle,
+                getattr(view_cls, 'throttle_classes', []),
+                f"{view_cls.__name__} must have AuthRateThrottle configured"
+            )
+
+    def test_auth_rate_throttle_blocks_brute_force_exceeding_limit(self):
+        """Repeated login attempts beyond the 10/minute auth rate limit must receive HTTP 429."""
+        # 10 attempts are evaluated against credentials (returning 401)
+        for _ in range(10):
+            res = self.client.post('/api/v1/auth/login/', {
+                'email': 'victim@example.com',
+                'password': 'badpassword'
+            })
+            self.assertEqual(res.status_code, status.HTTP_401_UNAUTHORIZED)
+
+        # 11th attempt must be blocked by AuthRateThrottle
+        res_blocked = self.client.post('/api/v1/auth/login/', {
+            'email': 'victim@example.com',
+            'password': 'badpassword'
+        })
+        self.assertEqual(res_blocked.status_code, status.HTTP_429_TOO_MANY_REQUESTS)
+
+
+
+
+

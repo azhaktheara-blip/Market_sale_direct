@@ -2,7 +2,7 @@ from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView, SpectacularSwaggerView
 from apps.core.analytics_views import (
     FarmerDashboardAnalyticsView,
@@ -38,22 +38,30 @@ admin.site.site_header = "FarmerDirect • Enterprise Marketplace Admin"
 admin.site.site_title = "FarmerDirect Admin Console"
 admin.site.index_title = "Marketplace Operations & Operations Command"
 
-def api_root(request):
-    return JsonResponse({
-        'status': 'healthy',
-        'service': 'FarmerDirect Marketplace API',
-        'version': '1.0.0',
-        'api_v1_endpoints': {
-            'products': '/api/v1/products/',
-            'categories': '/api/v1/categories/',
-            'farmers': '/api/v1/farmers/',
-            'agri_weather': '/api/v1/ai/agri-weather/',
-            'market_prices': '/api/v1/ai/market-prices/',
-        }
-    })
+
+def health_check(request):
+    """
+    Minimal health check endpoint for uptime monitors, load balancers, and container probes.
+    Returns status: ok only without leaking route maps or service internals.
+    """
+    return JsonResponse({'status': 'ok'})
+
+
+def robots_txt(request):
+    """
+    Disallow all web crawlers from indexing API endpoints and the admin backend.
+    """
+    lines = [
+        "User-agent: *",
+        "Disallow: /",
+    ]
+    return HttpResponse("\n".join(lines), content_type="text/plain")
+
 
 urlpatterns = [
-    path('', api_root, name='api-root'),
+    path('', health_check, name='api-root'),
+    path('health/', health_check, name='health-check'),
+    path('robots.txt', robots_txt, name='robots-txt'),
     path(f'{ADMIN_URL}/', admin.site.urls),
 
     # OpenAPI Schema & Interactive Docs (Gated in production)

@@ -55,9 +55,52 @@ class ProductImageSerializer(serializers.ModelSerializer):
 
 
 class InventorySerializer(serializers.ModelSerializer):
+    available_quantity = serializers.SerializerMethodField()
+    reserved_quantity = serializers.SerializerMethodField()
+    in_stock = serializers.SerializerMethodField()
+    stock_level = serializers.SerializerMethodField()
+
     class Meta:
         model = Inventory
-        fields = ['available_quantity', 'reserved_quantity', 'low_stock_threshold', 'last_restocked_at']
+        fields = [
+            'in_stock', 'stock_level', 'available_quantity',
+            'reserved_quantity', 'low_stock_threshold', 'last_restocked_at'
+        ]
+
+    def _can_see_exact_stock(self, obj):
+        request = self.context.get('request')
+        if not request or not request.user.is_authenticated:
+            return False
+        user = request.user
+        if user.is_staff or getattr(user, 'role', '') == 'ADMIN':
+            return True
+        if hasattr(obj, 'product') and hasattr(obj.product, 'farmer'):
+            return getattr(obj.product.farmer, 'user_id', None) == user.id
+        return False
+
+    def get_available_quantity(self, obj):
+        if self._can_see_exact_stock(obj):
+            return obj.available_quantity
+        return None
+
+    def get_reserved_quantity(self, obj):
+        if self._can_see_exact_stock(obj):
+            return obj.reserved_quantity
+        return None
+
+    def get_in_stock(self, obj):
+        return (obj.available_quantity or 0) > 0
+
+    def get_stock_level(self, obj):
+        qty = obj.available_quantity or 0
+        if qty <= 0:
+            return "out_of_stock"
+        threshold = obj.low_stock_threshold or 10
+        if qty <= threshold:
+            return "low"
+        if qty <= threshold * 3:
+            return "ok"
+        return "high"
 
 
 class ProductListSerializer(serializers.ModelSerializer):
@@ -67,7 +110,9 @@ class ProductListSerializer(serializers.ModelSerializer):
     blur_placeholder = serializers.ReadOnlyField()
     farmer = FarmerSummarySerializer(read_only=True)
     category_name = serializers.CharField(source='category.name', read_only=True)
-    available_stock = serializers.DecimalField(max_digits=10, decimal_places=2, read_only=True)
+    available_stock = serializers.SerializerMethodField()
+    in_stock = serializers.SerializerMethodField()
+    stock_level = serializers.SerializerMethodField()
     volume_tiers = VolumeDiscountTierSerializer(many=True, read_only=True)
 
     class Meta:
@@ -78,7 +123,8 @@ class ProductListSerializer(serializers.ModelSerializer):
             'peak_season_months', 'is_organic', 'is_featured',
             'status', 'rating_avg', 'rating_count', 'primary_image',
             'thumbnail_url', 'medium_image_url', 'blur_placeholder',
-            'available_stock', 'volume_tiers', 'category', 'category_name', 'farmer',
+            'in_stock', 'stock_level', 'available_stock',
+            'volume_tiers', 'category', 'category_name', 'farmer',
             'created_at'
         ]
 
@@ -99,6 +145,42 @@ class ProductListSerializer(serializers.ModelSerializer):
     def get_medium_image_url(self, obj):
         return self._resolve_url(obj.medium_image_url)
 
+    def _can_see_exact_stock(self, obj):
+        request = self.context.get('request')
+        if not request or not request.user.is_authenticated:
+            return False
+        user = request.user
+        if user.is_staff or getattr(user, 'role', '') == 'ADMIN':
+            return True
+        if hasattr(obj, 'farmer'):
+            return getattr(obj.farmer, 'user_id', None) == user.id
+        return False
+
+    def get_available_stock(self, obj):
+        if self._can_see_exact_stock(obj):
+            return obj.available_stock
+        return None
+
+    def get_in_stock(self, obj):
+        stock = getattr(obj, 'available_stock', None)
+        if stock is not None:
+            return stock > 0
+        if hasattr(obj, 'inventory'):
+            return obj.inventory.available_quantity > 0
+        return False
+
+    def get_stock_level(self, obj):
+        stock = getattr(obj, 'available_stock', None)
+        if stock is None and hasattr(obj, 'inventory'):
+            stock = obj.inventory.available_quantity
+        if stock is None or stock <= 0:
+            return "out_of_stock"
+        if stock <= 10:
+            return "low"
+        if stock <= 50:
+            return "ok"
+        return "high"
+
 
 class ProductDetailSerializer(serializers.ModelSerializer):
     images = ProductImageSerializer(many=True, read_only=True)
@@ -110,6 +192,9 @@ class ProductDetailSerializer(serializers.ModelSerializer):
     thumbnail_url = serializers.SerializerMethodField()
     medium_image_url = serializers.SerializerMethodField()
     blur_placeholder = serializers.ReadOnlyField()
+    available_stock = serializers.SerializerMethodField()
+    in_stock = serializers.SerializerMethodField()
+    stock_level = serializers.SerializerMethodField()
 
     class Meta:
         model = Product
@@ -120,7 +205,8 @@ class ProductDetailSerializer(serializers.ModelSerializer):
             'is_organic', 'is_featured', 'status', 'rating_avg',
             'rating_count', 'primary_image', 'thumbnail_url', 'medium_image_url',
             'blur_placeholder', 'images', 'volume_tiers', 'category',
-            'farmer', 'inventory', 'created_at', 'updated_at'
+            'farmer', 'inventory', 'in_stock', 'stock_level', 'available_stock',
+            'created_at', 'updated_at'
         ]
 
     def _resolve_url(self, url):
@@ -139,6 +225,42 @@ class ProductDetailSerializer(serializers.ModelSerializer):
 
     def get_medium_image_url(self, obj):
         return self._resolve_url(obj.medium_image_url)
+
+    def _can_see_exact_stock(self, obj):
+        request = self.context.get('request')
+        if not request or not request.user.is_authenticated:
+            return False
+        user = request.user
+        if user.is_staff or getattr(user, 'role', '') == 'ADMIN':
+            return True
+        if hasattr(obj, 'farmer'):
+            return getattr(obj.farmer, 'user_id', None) == user.id
+        return False
+
+    def get_available_stock(self, obj):
+        if self._can_see_exact_stock(obj):
+            if hasattr(obj, 'available_stock') and obj.available_stock is not None:
+                return obj.available_stock
+            if hasattr(obj, 'inventory'):
+                return obj.inventory.available_quantity
+        return None
+
+    def get_in_stock(self, obj):
+        if hasattr(obj, 'inventory'):
+            return obj.inventory.available_quantity > 0
+        return False
+
+    def get_stock_level(self, obj):
+        if hasattr(obj, 'inventory'):
+            qty = obj.inventory.available_quantity
+            if qty <= 0:
+                return "out_of_stock"
+            if qty <= (obj.inventory.low_stock_threshold or 10):
+                return "low"
+            if qty <= (obj.inventory.low_stock_threshold or 10) * 3:
+                return "ok"
+            return "high"
+        return "out_of_stock"
 
 
 class ProductCreateUpdateSerializer(serializers.ModelSerializer):

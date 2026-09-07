@@ -66,18 +66,13 @@ A modern, production-grade agricultural marketplace platform built to connect lo
 
 ---
 
-## 🔑 Pre-Seeded Demonstration Accounts
+## 🔑 Demonstration & Staging Access
 
-All accounts come pre-configured with active produce, historical orders, and verified reviews:
+For security reasons, demonstration credentials and test passwords are not published in this repository.
 
-| Role | Email Address | Password | Description |
-| :--- | :--- | :--- | :--- |
-| **Admin** | `admin@farmerdirect.com` | `admin123456` | Platform Admin Console & Verification |
-| **Farmer (Siem Reap)** | `sokha.farm@farmerdirect.com` | `farmer123456` | Sokha Green Organic Farm |
-| **Farmer (Battambang)** | `battambang.valley@farmerdirect.com` | `farmer123456` | Battambang Valley Rice & Fruits |
-| **Farmer (Kampot)** | `kampot.pepper@farmerdirect.com` | `farmer123456` | Kampot Heritage Pepper Estate |
-| **Farmer (Mondulkiri)** | `mondulkiri.coffee@farmerdirect.com` | `farmer123456` | Mondulkiri Highlands Organic |
-| **Customer** | `customer@example.com` | `customer123456` | Som Dara (Individual / Restaurant) |
+- **Staging / QA Access**: Ask the operator for a staging invite or provision test accounts using environment-configured secrets.
+- **Local Development**: Run `python manage.py createsuperuser` or configure local developer accounts directly in your isolated environment.
+- **Production Warning**: Any historical default or seeded credentials must be rotated immediately upon production provisioning.
 
 ---
 

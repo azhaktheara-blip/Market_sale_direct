@@ -180,5 +180,43 @@ class ProductsCatalogTests(TestCase):
         self.assertIsNotNone(res.data['primary_image'])
         self.assertTrue(res.data['primary_image'].startswith('http'))
 
+    def test_anonymous_product_list_hides_exact_stock_and_farmer_account_id(self):
+        """Public anonymous catalog requests must not leak exact stock quantities or account IDs."""
+        res = self.client.get('/api/v1/products/')
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        product_item = res.data['results'][0]
+
+        # available_stock must be None for anonymous buyers
+        self.assertIsNone(product_item['available_stock'])
+        # in_stock and stock_level must be present
+        self.assertTrue(product_item['in_stock'])
+        self.assertIn(product_item['stock_level'], ['low', 'ok', 'high'])
+        # farmer account_id must be None for anonymous buyers
+        self.assertIsNone(product_item['farmer']['account_id'])
+
+    def test_anonymous_product_detail_hides_exact_inventory_and_account_id(self):
+        """Public anonymous detail requests must not leak exact inventory quantities or account IDs."""
+        res = self.client.get(f'/api/v1/products/{self.product.slug}/')
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+
+        self.assertIsNone(res.data['available_stock'])
+        self.assertTrue(res.data['in_stock'])
+        self.assertIn(res.data['stock_level'], ['low', 'ok', 'high'])
+        self.assertIsNone(res.data['inventory']['available_quantity'])
+        self.assertIsNone(res.data['inventory']['reserved_quantity'])
+        self.assertIsNone(res.data['farmer']['account_id'])
+
+    def test_farmer_owner_can_see_exact_stock(self):
+        """Owner farmer authenticated can view exact stock quantities and account IDs."""
+        self.client.force_authenticate(user=self.farmer_user)
+        res = self.client.get(f'/api/v1/products/{self.product.slug}/')
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+
+        self.assertIsNotNone(res.data['inventory']['available_quantity'])
+        self.assertEqual(Decimal(str(res.data['inventory']['available_quantity'])), Decimal('50.00'))
+        self.assertIsNotNone(res.data['farmer']['account_id'])
+        self.assertEqual(res.data['farmer']['account_id'], self.farmer_profile.account_id)
+
+
 
 

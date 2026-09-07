@@ -318,7 +318,15 @@ export const ProductDetailPage: React.FC = () => {
             <div className="flex items-center gap-4 text-xs text-stone-600">
               <span>Minimum order: <strong>{product.minimum_order_qty} {product.unit}</strong></span>
               <span>•</span>
-              <span>Available in stock: <strong>{product.available_stock || 0} {product.unit}</strong></span>
+              <span>
+                Status: {product.available_stock ? (
+                  <strong>{product.available_stock} {product.unit} available</strong>
+                ) : product.in_stock ? (
+                  <strong className="text-emerald-700">In Stock {product.stock_level === 'low' ? '(Limited Harvest)' : ''}</strong>
+                ) : (
+                  <strong className="text-rose-600">Sold Out</strong>
+                )}
+              </span>
             </div>
           </div>
 
