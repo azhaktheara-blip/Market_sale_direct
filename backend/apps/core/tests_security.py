@@ -632,6 +632,68 @@ class SecurityAuditTestSuite(TestCase):
         self.assertIsNotNone(tx)
         self.assertEqual(tx.status, PaymentTransaction.Status.REFUNDED)
 
+    def test_health_check_returns_minimal_ok_without_leaking_routes(self):
+        """Health check endpoint must return only status: ok without leaking internal route maps."""
+        res = self.client.get('/health/')
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertEqual(res.json(), {'status': 'ok'})
+
+    def test_robots_txt_disallows_all_scrapers_from_backend(self):
+        """robots.txt must instruct all web scrapers and crawlers to avoid indexing the API backend."""
+        res = self.client.get('/robots.txt')
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        content = res.content.decode('utf-8')
+        self.assertIn('User-agent: *', content)
+        self.assertIn('Disallow: /', content)
+
+    def test_swagger_schema_protected_when_debug_false(self):
+        """OpenAPI / Swagger schema must require staff/admin authentication in production (DEBUG=False)."""
+        with override_settings(DEBUG=False):
+            res = self.client.get('/api/schema/')
+            self.assertIn(res.status_code, [status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN])
+
+    def test_customer_cannot_review_unpurchased_or_undelivered_item(self):
+        """Customer cannot review an item they did not buy or from an order that is not DELIVERED."""
+        order_item = OrderItem.objects.create(
+            order=self.order1,
+            product=self.product1,
+            product_name_snapshot=self.product1.name,
+            product_image_snapshot='',
+            unit_snapshot='KG',
+            unit_price_snapshot=Decimal('2.50'),
+            quantity=Decimal('2.00'),
+            subtotal=Decimal('5.00')
+        )
+        # 1. Customer 2 (attacker) trying to review Customer 1's purchase
+        self.client.force_authenticate(user=self.customer2)
+        res_fake = self.client.post('/api/v1/reviews/', {
+            'order_item_id': str(order_item.id),
+            'rating': 5,
+            'title': 'Fake Review',
+            'comment': 'I never bought this.'
+        })
+        self.assertEqual(res_fake.status_code, status.HTTP_400_BAD_REQUEST)
+
+        # 2. Customer 1 trying to review before order is DELIVERED
+        self.client.force_authenticate(user=self.customer1)
+        self.order1.status = Order.Status.PENDING
+        self.order1.save(update_fields=['status'])
+        res_early = self.client.post('/api/v1/reviews/', {
+            'order_item_id': str(order_item.id),
+            'rating': 5,
+            'title': 'Premature Review',
+            'comment': 'Item not received yet.'
+        })
+        self.assertEqual(res_early.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_customer_cannot_view_another_customers_order_detail(self):
+        """Customer cannot view order details of an order belonging to another customer (IDOR protection)."""
+        self.client.force_authenticate(user=self.customer2)
+        res = self.client.get(f'/api/v1/orders/{self.order1.id}/')
+        self.assertEqual(res.status_code, status.HTTP_404_NOT_FOUND)
+
+
+
 
 
 

@@ -1,6 +1,7 @@
 from rest_framework import generics, permissions, status
 from rest_framework.views import APIView
 from rest_framework.response import Response
+from rest_framework.throttling import UserRateThrottle
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import OrderingFilter
 from drf_spectacular.utils import extend_schema
@@ -43,6 +44,7 @@ class FarmerReviewListView(generics.ListAPIView):
 @extend_schema(tags=['Reviews'])
 class CreateReviewView(APIView):
     permission_classes = [permissions.IsAuthenticated]
+    throttle_classes = [UserRateThrottle]
 
     def post(self, request):
         serializer = CreateReviewSerializer(data=request.data, context={'request': request})
