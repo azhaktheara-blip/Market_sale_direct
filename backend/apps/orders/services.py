@@ -201,7 +201,7 @@ class OrderService:
                 Order.Status.READY,
                 Order.Status.CANCELLED,
             ],
-            Order.Status.DELIVERED: [Order.Status.DELIVERED],
+            Order.Status.DELIVERED: [],
             Order.Status.CANCELLED: [],
             Order.Status.REJECTED: [],
         }
@@ -241,6 +241,15 @@ class OrderService:
                         inv.save(update_fields=['available_quantity', 'reserved_quantity', 'updated_at'])
                     except Inventory.DoesNotExist:
                         pass
+
+            # If order was already paid, record refund status in ledger
+            if hasattr(order, 'payment') and order.payment.status == Payment.Status.COMPLETED:
+                order.payment.status = Payment.Status.REFUNDED
+                order.payment.save(update_fields=['status'])
+                order.payment_status = Order.PaymentStatus.REFUNDED
+                from apps.payments.services import PaymentService
+                from apps.payments.models import PaymentTransaction
+                PaymentService.record_transaction(order.payment, tx_status=PaymentTransaction.Status.REFUNDED)
 
         elif new_status == Order.Status.DELIVERED:
             if hasattr(order, 'delivery'):

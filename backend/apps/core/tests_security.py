@@ -574,6 +574,65 @@ class SecurityAuditTestSuite(TestCase):
         res = self.client.get('/api/v1/farmer/products/')
         self.assertEqual(res.status_code, status.HTTP_403_FORBIDDEN)
 
+    def test_farmer_cannot_update_another_farmers_order(self):
+        """Farmer cannot update or manipulate another farmer's orders (IDOR protection)."""
+        self.client.force_authenticate(user=self.farmer_user2)
+        res = self.client.patch(f'/api/v1/farmer/orders/{self.order1.id}/status/', {
+            'status': 'CONFIRMED'
+        })
+        self.assertEqual(res.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_order_status_cannot_transition_from_delivered_terminal_state(self):
+        """Orders marked DELIVERED cannot transition to any other status."""
+        from apps.orders.services import OrderService
+        from rest_framework.exceptions import ValidationError
+
+        self.order1.status = Order.Status.DELIVERED
+        self.order1.save(update_fields=['status'])
+
+        with self.assertRaises(ValidationError):
+            OrderService.update_order_status(self.order1, Order.Status.CANCELLED, actor=self.farmer_user1)
+
+    def test_cancelling_paid_order_marks_payment_and_ledger_as_refunded(self):
+        """Cancelling an already paid order marks payment REFUNDED and logs refund in ledger."""
+        from apps.orders.services import OrderService
+
+        paid_order = Order.objects.create(
+            customer=self.customer1,
+            farmer=self.farmer1,
+            subtotal=Decimal('30.00'),
+            delivery_fee=Decimal('2.00'),
+            total=Decimal('32.00'),
+            commission_rate_percentage=Decimal('5.00'),
+            marketplace_commission=Decimal('1.50'),
+            farmer_payout=Decimal('28.50'),
+            payment_method=Order.PaymentMethod.BAKONG_QR,
+            payment_status=Order.PaymentStatus.PAID,
+            status=Order.Status.CONFIRMED
+        )
+        payment = Payment.objects.create(
+            order=paid_order,
+            payment_method=Order.PaymentMethod.BAKONG_QR,
+            amount=paid_order.total,
+            status=Payment.Status.COMPLETED,
+            transaction_id=f"KHQR-{uuid.uuid4().hex[:12].upper()}"
+        )
+
+        # Cancel the order
+        OrderService.update_order_status(paid_order, Order.Status.CANCELLED, actor=self.farmer_user1)
+        paid_order.refresh_from_db()
+        payment.refresh_from_db()
+
+        self.assertEqual(paid_order.status, Order.Status.CANCELLED)
+        self.assertEqual(paid_order.payment_status, Order.PaymentStatus.REFUNDED)
+        self.assertEqual(payment.status, Payment.Status.REFUNDED)
+
+        # Confirm ledger transaction has REFUNDED status
+        tx = PaymentTransaction.objects.filter(order=paid_order).first()
+        self.assertIsNotNone(tx)
+        self.assertEqual(tx.status, PaymentTransaction.Status.REFUNDED)
+
+
 
 
 

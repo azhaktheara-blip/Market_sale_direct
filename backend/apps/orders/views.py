@@ -3,6 +3,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import OrderingFilter
+from django.db import transaction
 from drf_spectacular.utils import extend_schema
 from .models import Order
 from .serializers import (
@@ -117,12 +118,13 @@ class FarmerOrderListView(generics.ListAPIView):
 class FarmerUpdateOrderStatusView(APIView):
     permission_classes = [permissions.IsAuthenticated, IsFarmer]
 
+    @transaction.atomic
     def patch(self, request, pk):
         serializer = UpdateOrderStatusSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
         try:
-            order = Order.objects.get(pk=pk, farmer=request.user.farmer_profile)
+            order = Order.objects.select_for_update().get(pk=pk, farmer=request.user.farmer_profile)
         except Order.DoesNotExist:
             return Response({'detail': 'Order not found.'}, status=status.HTTP_404_NOT_FOUND)
 
