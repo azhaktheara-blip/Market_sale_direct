@@ -8,6 +8,22 @@ from django.db import IntegrityError
 logger = logging.getLogger(__name__)
 
 
+def sanitize_error_payload(data):
+    """
+    Recursively unwraps DRF ErrorDetail and other internal objects into clean primitive strings/lists/dicts.
+    Guarantees no internal Django/DRF classes or code metadata leak into API error envelopes.
+    """
+    if isinstance(data, dict):
+        return {str(k): sanitize_error_payload(v) for k, v in data.items()}
+    elif isinstance(data, (list, tuple)):
+        return [sanitize_error_payload(item) for item in data]
+    elif hasattr(data, 'string'):
+        return str(data.string)
+    elif data is not None:
+        return str(data)
+    return data
+
+
 def custom_exception_handler(exc, context):
     """
     Custom exception handler that ensures all error responses have a uniform JSON shape:
@@ -35,10 +51,10 @@ def custom_exception_handler(exc, context):
             if "detail" in response.data:
                 custom_data["message"] = str(response.data["detail"])
             else:
-                custom_data["errors"] = response.data
+                custom_data["errors"] = sanitize_error_payload(response.data)
                 custom_data["message"] = "Validation error."
         elif isinstance(response.data, list):
-            custom_data["errors"] = {"non_field_errors": response.data}
+            custom_data["errors"] = {"non_field_errors": sanitize_error_payload(response.data)}
             custom_data["message"] = "Validation error."
         else:
             custom_data["message"] = str(response.data)

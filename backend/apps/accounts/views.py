@@ -21,7 +21,7 @@ from .serializers import (
 )
 from .utils import send_verification_email, verify_user_token
 from apps.core.permissions import IsOwnerOrAdmin
-from apps.core.throttling import AuthRateThrottle
+from apps.core.throttling import AuthRateThrottle, LoginRateThrottle
 
 logger = logging.getLogger(__name__)
 User = get_user_model()
@@ -29,7 +29,7 @@ User = get_user_model()
 
 @extend_schema(tags=['Authentication'])
 class CustomTokenObtainPairView(TokenObtainPairView):
-    throttle_classes = [AuthRateThrottle]
+    throttle_classes = [LoginRateThrottle, AuthRateThrottle]
     serializer_class = CustomTokenObtainPairSerializer
 
 

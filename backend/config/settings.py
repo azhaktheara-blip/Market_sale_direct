@@ -261,6 +261,7 @@ REST_FRAMEWORK = {
         'anon': '100/hour',
         'user': '1000/hour',
         'auth': '10/minute',
+        'login': '5/15m',
         'payment': '30/minute',
         'search': '60/minute',
         'upload': '20/minute',
