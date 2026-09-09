@@ -18,6 +18,7 @@ from django.utils.decorators import method_decorator
 from django.views.decorators.cache import cache_page
 from .filters import ProductFilter
 from apps.core.permissions import IsFarmer, IsAdminUserOnly
+from apps.core.throttling import UploadRateThrottle
 
 
 @extend_schema(tags=['Categories'])
@@ -169,6 +170,7 @@ class SeasonalCalendarView(APIView):
 class ProductImageUploadView(APIView):
     permission_classes = [permissions.IsAuthenticated, IsFarmer]
     parser_classes = [MultiPartParser, FormParser]
+    throttle_classes = [UploadRateThrottle]
 
     def post(self, request, product_id):
         try:

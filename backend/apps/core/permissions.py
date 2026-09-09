@@ -21,10 +21,16 @@ class IsAdminUserOnly(permissions.BasePermission):
 
 class IsFarmer(permissions.BasePermission):
     """
-    Allow access only to registered FARMER users.
+    Allow access only to registered FARMER users who have an active FarmerProfile.
+    Prevents 500 errors and unassociated accounts from invoking farmer portal endpoints.
     """
     def has_permission(self, request, view):
-        return bool(request.user and request.user.is_authenticated and request.user.role == 'FARMER')
+        return bool(
+            request.user
+            and request.user.is_authenticated
+            and request.user.role == 'FARMER'
+            and hasattr(request.user, 'farmer_profile')
+        )
 
 
 class IsCustomer(permissions.BasePermission):

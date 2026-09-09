@@ -529,6 +529,51 @@ class SecurityAuditTestSuite(TestCase):
         self.assertEqual(tx.farmer_net_payout, Decimal('19.00'))
         self.assertEqual(tx.status, PaymentTransaction.Status.SUCCESS)
 
+    def test_farmer_cannot_set_negative_inventory_stock(self):
+        """Farmer cannot set negative inventory quantity via API."""
+        self.client.force_authenticate(user=self.farmer_user1)
+        res = self.client.patch(f'/api/v1/farmer/inventory/{self.product1.id}/', {
+            'available_quantity': '-15.00'
+        })
+        self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('available_quantity', str(res.json()))
+
+    def test_farmer_cannot_create_product_with_zero_or_negative_price(self):
+        """Creating products with zero or negative price must be rejected with 400 Bad Request."""
+        self.client.force_authenticate(user=self.farmer_user1)
+        res_neg = self.client.post('/api/v1/farmer/products/', {
+            'category': self.category.id,
+            'name': 'Free Produce Exploit',
+            'price': '-2.00',
+            'unit': 'KG',
+            'harvest_date': timezone.now().date().isoformat(),
+            'status': 'DRAFT'
+        })
+        self.assertEqual(res_neg.status_code, status.HTTP_400_BAD_REQUEST)
+
+        res_zero = self.client.post('/api/v1/farmer/products/', {
+            'category': self.category.id,
+            'name': 'Zero Produce Exploit',
+            'price': '0.00',
+            'unit': 'KG',
+            'harvest_date': timezone.now().date().isoformat(),
+            'status': 'DRAFT'
+        })
+        self.assertEqual(res_zero.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_unprofiled_user_cannot_access_farmer_portal(self):
+        """User with FARMER role but no associated FarmerProfile must be blocked with 403 Forbidden."""
+        orphan_farmer = User.objects.create_user(
+            email='orphan_farmer@example.com',
+            username='orphan_farmer',
+            password='SecureKhmer@2026!',
+            role=User.Role.FARMER,
+            email_verified=True
+        )
+        self.client.force_authenticate(user=orphan_farmer)
+        res = self.client.get('/api/v1/farmer/products/')
+        self.assertEqual(res.status_code, status.HTTP_403_FORBIDDEN)
+
 
 
 

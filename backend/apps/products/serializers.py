@@ -1,3 +1,4 @@
+from decimal import Decimal
 from rest_framework import serializers
 from django.db import transaction
 from .models import Category, Product, ProductImage, Inventory, VolumeDiscountTier
@@ -264,12 +265,27 @@ class ProductDetailSerializer(serializers.ModelSerializer):
 
 
 class ProductCreateUpdateSerializer(serializers.ModelSerializer):
+    price = serializers.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        min_value=Decimal('0.01'),
+        max_value=Decimal('10000.00'),
+        required=True
+    )
+    minimum_order_qty = serializers.DecimalField(
+        max_digits=8,
+        decimal_places=2,
+        min_value=Decimal('0.01'),
+        required=False,
+        default=Decimal('1.00')
+    )
     initial_stock = serializers.DecimalField(
         max_digits=10,
         decimal_places=2,
+        min_value=Decimal('0.00'),
         required=False,
         write_only=True,
-        default=0.00
+        default=Decimal('0.00')
     )
     uploaded_images = serializers.ListField(
         child=serializers.ImageField(allow_empty_file=False, use_url=False),
@@ -361,6 +377,19 @@ class ProductImageUploadResponseSerializer(serializers.Serializer):
 
 
 class InventoryUpdateSerializer(serializers.ModelSerializer):
+    available_quantity = serializers.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        min_value=Decimal('0.00'),
+        required=False
+    )
+    low_stock_threshold = serializers.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        min_value=Decimal('0.00'),
+        required=False
+    )
+
     class Meta:
         model = Inventory
         fields = ['available_quantity', 'low_stock_threshold']

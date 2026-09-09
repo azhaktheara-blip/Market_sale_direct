@@ -67,7 +67,7 @@ class Product(TimeStampedModel):
     price = models.DecimalField(
         max_digits=10,
         decimal_places=2,
-        validators=[MinValueValidator(0.01)],
+        validators=[MinValueValidator(Decimal('0.01'))],
         db_index=True
     )
     unit = models.CharField(max_length=20, choices=Unit.choices, default=Unit.KG)
@@ -75,7 +75,7 @@ class Product(TimeStampedModel):
         max_digits=8,
         decimal_places=2,
         default=1.00,
-        validators=[MinValueValidator(0.01)]
+        validators=[MinValueValidator(Decimal('0.01'))]
     )
     harvest_date = models.DateField(db_index=True)
     is_preorder = models.BooleanField(default=False, db_index=True, help_text="True if item is pre-harvest advance order")
@@ -260,14 +260,14 @@ class Inventory(TimeStampedModel):
     available_quantity = models.DecimalField(
         max_digits=10,
         decimal_places=2,
-        default=0.00,
-        validators=[MinValueValidator(0.00)]
+        default=Decimal('0.00'),
+        validators=[MinValueValidator(Decimal('0.00'))]
     )
     reserved_quantity = models.DecimalField(
         max_digits=10,
         decimal_places=2,
-        default=0.00,
-        validators=[MinValueValidator(0.00)]
+        default=Decimal('0.00'),
+        validators=[MinValueValidator(Decimal('0.00'))]
     )
     low_stock_threshold = models.DecimalField(
         max_digits=10,
