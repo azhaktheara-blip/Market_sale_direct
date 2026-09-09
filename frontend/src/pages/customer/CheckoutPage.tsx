@@ -329,19 +329,14 @@ export const CheckoutPage: React.FC = () => {
               </div>
 
               <div
-                onClick={() => setPaymentMethod('CREDIT_CARD')}
-                className={`p-4 rounded-2xl border-2 transition-all cursor-pointer space-y-2 ${
-                  paymentMethod === 'CREDIT_CARD'
-                    ? 'border-forest-600 bg-forest-50/40 shadow-sm'
-                    : 'border-stone-200 hover:border-stone-300'
-                }`}
+                className="p-4 rounded-2xl border-2 border-stone-200 bg-stone-50/50 opacity-60 cursor-not-allowed space-y-2 select-none"
               >
                 <div className="flex items-center justify-between">
-                  <CreditCard className="w-5 h-5 text-indigo-600" />
-                  {paymentMethod === 'CREDIT_CARD' && <CheckCircle2 className="w-4 h-4 text-forest-600" />}
+                  <CreditCard className="w-5 h-5 text-stone-400" />
+                  <span className="text-[10px] font-bold bg-stone-200 text-stone-600 px-2 py-0.5 rounded-full">Coming Soon</span>
                 </div>
-                <h3 className="text-xs font-bold text-stone-900">Credit / Debit Card</h3>
-                <p className="text-[11px] text-stone-500">Encrypted card transaction escrow.</p>
+                <h3 className="text-xs font-bold text-stone-600">Credit / Debit Card</h3>
+                <p className="text-[11px] text-stone-400">Direct card processing launching in next release.</p>
               </div>
             </div>
           </div>

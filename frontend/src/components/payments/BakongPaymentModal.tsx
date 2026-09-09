@@ -309,24 +309,26 @@ export const BakongPaymentModal: React.FC<BakongPaymentModalProps> = ({
             </div>
           </div>
 
-          {/* Simulate Bank Webhook Confirmation */}
-          <div className="pt-1">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={handleSimulatePayment}
-              isLoading={isSimulating}
-              className="w-full text-[11px] font-bold text-teal-700 border-teal-200 hover:bg-teal-50"
-              leftIcon={<Zap className="w-3.5 h-3.5 text-teal-600" />}
-            >
-              Confirm Bank Transfer (Simulate Bank Hook)
-            </Button>
-          </div>
+          {/* Simulate Bank Webhook Confirmation (Development only) */}
+          {import.meta.env.DEV && (
+            <div className="pt-1">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleSimulatePayment}
+                isLoading={isSimulating}
+                className="w-full text-[11px] font-bold text-teal-700 border-teal-200 hover:bg-teal-50"
+                leftIcon={<Zap className="w-3.5 h-3.5 text-teal-600" />}
+              >
+                Confirm Bank Transfer (Dev Simulation Hook)
+              </Button>
+            </div>
+          )}
 
           <div className="text-[10px] text-stone-400 text-center flex items-center justify-center gap-1">
             <ShieldCheck className="w-3 h-3 text-emerald-600" />
-            <span>Escrow Protected: Funds released to farmer only after crate handover.</span>
+            <span>Direct Farmer Payment: Validated securely via Bakong KHQR network.</span>
           </div>
         </div>
       )}

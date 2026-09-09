@@ -1,5 +1,5 @@
 from decimal import Decimal
-from django.db import transaction
+from django.db import transaction, models
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from rest_framework.exceptions import ValidationError, PermissionDenied
@@ -17,9 +17,13 @@ class OrderService:
     @transaction.atomic
     def checkout(user, address_id, payment_method=Order.PaymentMethod.COD, customer_notes='', idempotency_key=None):
         if idempotency_key:
-            existing_order = Order.objects.filter(idempotency_key=idempotency_key, customer=user).first()
-            if existing_order:
-                return [existing_order]
+            existing_orders = list(Order.objects.filter(
+                customer=user
+            ).filter(
+                models.Q(idempotency_key=idempotency_key) | models.Q(idempotency_key__startswith=f"{idempotency_key}_")
+            ))
+            if existing_orders:
+                return existing_orders
 
         cart = Cart.objects.filter(user=user).first()
         if not cart or not cart.items.exists():
@@ -247,6 +251,8 @@ class OrderService:
                 order.payment.paid_at = timezone.now()
                 order.payment.save(update_fields=['status', 'paid_at'])
                 order.payment_status = Order.PaymentStatus.PAID
+                from apps.payments.services import PaymentService
+                PaymentService.record_transaction(order.payment, tx_status='SUCCESS')
 
         order.save()
 

@@ -25,6 +25,9 @@ class InitiatePaymentView(APIView):
         except Order.DoesNotExist:
             return Response({'detail': 'Order not found.'}, status=status.HTTP_404_NOT_FOUND)
 
+        if order.payment_status == Order.PaymentStatus.PAID:
+            return Response({'detail': 'This order has already been paid.'}, status=status.HTTP_400_BAD_REQUEST)
+
         method = request.data.get('payment_method', order.payment_method)
         currency = request.data.get('currency', 'USD')
         result = PaymentService.get_gateway(method).create_payment(order, currency=currency)

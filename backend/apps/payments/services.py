@@ -421,7 +421,7 @@ def settle_payment(payment_id: UUID, raw_payload: dict[str, Any], signature: str
         event_id=event_id,
         defaults={'payload_hash': hashlib.sha256(str(raw_payload).encode()).hexdigest()}
     )
-    if not created and payment.status == Payment.Status.COMPLETED:
+    if not created:
         logger.info("Webhook event %s already processed for payment %s.", event_id, payment.id)
         return payment
 

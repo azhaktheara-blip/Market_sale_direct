@@ -12,7 +12,7 @@ from apps.accounts.models import Address
 from apps.farmers.models import FarmerProfile
 from apps.products.models import Category, Product, Inventory
 from apps.orders.models import Order, OrderItem
-from apps.payments.models import Payment, ProcessedWebhook
+from apps.payments.models import Payment, PaymentTransaction, ProcessedWebhook
 from apps.cart.models import Cart, CartItem
 from apps.reviews.models import Review
 
@@ -387,22 +387,148 @@ class SecurityAuditTestSuite(TestCase):
                 f"{view_cls.__name__} must have AuthRateThrottle configured"
             )
 
-    def test_auth_rate_throttle_blocks_brute_force_exceeding_limit(self):
-        """Repeated login attempts beyond the 10/minute auth rate limit must receive HTTP 429."""
-        # 10 attempts are evaluated against credentials (returning 401)
-        for _ in range(10):
+    def test_login_rate_throttle_blocks_sixth_attempt_per_ip_and_email(self):
+        """Repeated login attempts beyond the 5/15m limit must receive HTTP 429 on the 6th attempt."""
+        cache.clear()
+        # First 5 attempts return 401 Unauthorized
+        for _ in range(5):
             res = self.client.post('/api/v1/auth/login/', {
                 'email': 'victim@example.com',
                 'password': 'badpassword'
             })
             self.assertEqual(res.status_code, status.HTTP_401_UNAUTHORIZED)
 
-        # 11th attempt must be blocked by AuthRateThrottle
+        # 6th attempt must be blocked by LoginRateThrottle
         res_blocked = self.client.post('/api/v1/auth/login/', {
             'email': 'victim@example.com',
             'password': 'badpassword'
         })
         self.assertEqual(res_blocked.status_code, status.HTTP_429_TOO_MANY_REQUESTS)
+
+    def test_auth_rate_throttle_blocks_brute_force_exceeding_limit(self):
+        """Repeated auth token refresh requests beyond the 10/minute auth rate limit must receive HTTP 429."""
+        cache.clear()
+        # 10 attempts evaluated against refresh endpoint (returning 400/401)
+        for _ in range(10):
+            res = self.client.post('/api/v1/auth/refresh/', {
+                'refresh': 'invalid_token_sample'
+            })
+            self.assertIn(res.status_code, [status.HTTP_400_BAD_REQUEST, status.HTTP_401_UNAUTHORIZED])
+
+        # 11th attempt must be blocked by AuthRateThrottle
+        res_blocked = self.client.post('/api/v1/auth/refresh/', {
+            'refresh': 'invalid_token_sample'
+        })
+        self.assertEqual(res_blocked.status_code, status.HTTP_429_TOO_MANY_REQUESTS)
+
+    def test_auth_error_envelope_sanitizes_errordetail_types(self):
+        """Validation errors must have clean primitive types in envelope without leaking ErrorDetail objects."""
+        from apps.core.exceptions import sanitize_error_payload
+        from rest_framework.exceptions import ErrorDetail
+
+        raw_errors = {
+            "email": [ErrorDetail("Enter a valid email address.", code="invalid")],
+            "nested": {
+                "field": [ErrorDetail("This field is required.", code="required")]
+            }
+        }
+        sanitized = sanitize_error_payload(raw_errors)
+        self.assertEqual(sanitized["email"], ["Enter a valid email address."])
+        self.assertEqual(sanitized["nested"]["field"], ["This field is required."])
+        self.assertIsInstance(sanitized["email"][0], str)
+        self.assertNotIsInstance(sanitized["email"][0], ErrorDetail)
+
+    def test_cannot_initiate_payment_for_already_paid_order(self):
+        """Initiating payment on an already paid order must be rejected with 400 Bad Request."""
+        self.order1.payment_status = Order.PaymentStatus.PAID
+        self.order1.save(update_fields=['payment_status'])
+
+        self.client.force_authenticate(user=self.customer1)
+        res = self.client.post(f'/api/v1/payments/{self.order1.id}/initiate/', {
+            'payment_method': 'BAKONG_QR'
+        })
+        self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("already been paid", str(res.json()))
+
+    def test_checkout_idempotency_prevents_duplicate_orders(self):
+        """Retrying checkout with the same Idempotency-Key returns existing orders without double-charging or deducting stock twice."""
+        from apps.orders.services import OrderService
+
+        # Setup address and cart
+        addr = Address.objects.create(
+            user=self.customer1,
+            label='Home',
+            recipient_name='Customer One',
+            phone_number='012345678',
+            province='Siem Reap',
+            district='Siem Reap',
+            street_address='123 Main St',
+            is_default=True
+        )
+        cart, _ = Cart.objects.get_or_create(user=self.customer1)
+        CartItem.objects.create(cart=cart, product=self.product1, quantity=Decimal('2.00'))
+
+        idempotency_key = "unique_checkout_idem_999"
+
+        # First checkout attempt
+        orders1 = OrderService.checkout(
+            user=self.customer1,
+            address_id=addr.id,
+            payment_method=Order.PaymentMethod.COD,
+            idempotency_key=idempotency_key
+        )
+        self.assertEqual(len(orders1), 1)
+
+        # Retry with identical idempotency key
+        orders2 = OrderService.checkout(
+            user=self.customer1,
+            address_id=addr.id,
+            payment_method=Order.PaymentMethod.COD,
+            idempotency_key=idempotency_key
+        )
+        self.assertEqual(len(orders2), 1)
+        self.assertEqual(orders1[0].id, orders2[0].id)
+        self.assertEqual(Order.objects.filter(customer=self.customer1, idempotency_key__startswith=idempotency_key).count(), 1)
+
+    def test_cod_delivery_creates_payment_transaction_ledger(self):
+        """When a COD order is marked DELIVERED, it must atomically write a PaymentTransaction recording commissions and farmer payout."""
+        from apps.orders.services import OrderService
+
+        cod_order = Order.objects.create(
+            customer=self.customer1,
+            farmer=self.farmer1,
+            subtotal=Decimal('20.00'),
+            delivery_fee=Decimal('2.00'),
+            total=Decimal('22.00'),
+            commission_rate_percentage=Decimal('5.00'),
+            marketplace_commission=Decimal('1.00'),
+            farmer_payout=Decimal('19.00'),
+            payment_method=Order.PaymentMethod.COD,
+            payment_status=Order.PaymentStatus.PENDING,
+            status=Order.Status.READY
+        )
+        Payment.objects.create(
+            order=cod_order,
+            payment_method=Order.PaymentMethod.COD,
+            amount=cod_order.total,
+            status=Payment.Status.PENDING,
+            transaction_id=f"COD-{uuid.uuid4().hex[:12].upper()}"
+        )
+
+        OrderService.update_order_status(cod_order, Order.Status.DELIVERED, actor=self.farmer_user1)
+        cod_order.refresh_from_db()
+
+        self.assertEqual(cod_order.status, Order.Status.DELIVERED)
+        self.assertEqual(cod_order.payment_status, Order.PaymentStatus.PAID)
+        self.assertEqual(cod_order.payment.status, Payment.Status.COMPLETED)
+
+        # Confirm immutable ledger transaction exists
+        tx = PaymentTransaction.objects.filter(order=cod_order).first()
+        self.assertIsNotNone(tx)
+        self.assertEqual(tx.platform_commission, Decimal('1.00'))
+        self.assertEqual(tx.farmer_net_payout, Decimal('19.00'))
+        self.assertEqual(tx.status, PaymentTransaction.Status.SUCCESS)
+
 
 
 
