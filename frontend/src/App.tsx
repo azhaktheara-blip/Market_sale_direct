@@ -9,6 +9,7 @@ import { LanguageProvider } from './context/LanguageContext';
 
 import { MainLayout } from './components/layout/MainLayout';
 import { DashboardLayout } from './components/layout/DashboardLayout';
+import { DemoFeedbackWidget } from './components/common/DemoFeedbackWidget';
 
 // Core Public Pages (Immediate)
 import { HomePage } from './pages/public/HomePage';
@@ -146,6 +147,7 @@ export const App: React.FC = () => {
                   <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>
               </Suspense>
+              <DemoFeedbackWidget />
             </BrowserRouter>
             </ToastProvider>
           </LanguageProvider>
