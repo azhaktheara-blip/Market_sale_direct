@@ -200,14 +200,23 @@ export const CheckoutPage: React.FC = () => {
             </div>
 
             {addresses && addresses.length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div role="radiogroup" aria-label="Select delivery address" className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {addresses.map((addr) => (
                   <div
                     key={addr.id}
+                    role="radio"
+                    aria-checked={selectedAddressId === addr.id}
+                    tabIndex={0}
                     onClick={() => setSelectedAddressId(addr.id)}
-                    className={`p-4 rounded-2xl border-2 transition-all cursor-pointer flex flex-col justify-between ${
+                    onKeyDown={(e) => {
+                      if (e.key === ' ' || e.key === 'Enter') {
+                        e.preventDefault();
+                        setSelectedAddressId(addr.id);
+                      }
+                    }}
+                    className={`p-4 rounded-2xl border-2 transition-all cursor-pointer flex flex-col justify-between min-h-[96px] focus:outline-none focus-visible:ring-2 focus-visible:ring-forest-600 focus-visible:ring-offset-2 ${
                       selectedAddressId === addr.id
-                        ? 'border-forest-600 bg-forest-50/40 shadow-sm'
+                        ? 'border-forest-600 bg-forest-50/40 shadow-xs'
                         : 'border-stone-200 hover:border-stone-300 bg-white'
                     }`}
                   >
@@ -215,7 +224,7 @@ export const CheckoutPage: React.FC = () => {
                       <div className="flex items-center justify-between mb-1">
                         <span className="text-xs font-bold text-stone-900">{addr.label}</span>
                         {selectedAddressId === addr.id && (
-                          <CheckCircle2 className="w-4 h-4 text-forest-600" />
+                          <CheckCircle2 className="w-4 h-4 text-forest-600 shrink-0" />
                         )}
                       </div>
                       <p className="text-xs font-semibold text-stone-800">{addr.recipient_name}</p>
@@ -254,7 +263,7 @@ export const CheckoutPage: React.FC = () => {
                     <select
                       value={newProvince}
                       onChange={(e) => setNewProvince(e.target.value)}
-                      className="w-full bg-white border border-stone-300 rounded-xl p-2.5 text-xs text-stone-900 focus:outline-none focus:border-forest-600 font-medium"
+                      className="w-full min-h-[44px] bg-white border border-stone-300 rounded-xl p-2.5 text-xs text-stone-900 focus:outline-none focus:border-forest-600 font-medium"
                     >
                       {provinces.map((p) => (
                         <option key={p} value={p}>{p}</option>
@@ -275,7 +284,7 @@ export const CheckoutPage: React.FC = () => {
                   size="sm"
                   isLoading={addAddressMutation.isPending}
                   onClick={handleCreateAddress}
-                  className="w-full font-bold"
+                  className="w-full font-bold min-h-[44px]"
                 >
                   Save Delivery Address
                 </Button>
@@ -292,29 +301,47 @@ export const CheckoutPage: React.FC = () => {
               <h2 className="text-base font-bold text-stone-900">Select Payment Method</h2>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div role="radiogroup" aria-label="Select payment method" className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div
+                role="radio"
+                aria-checked={paymentMethod === 'COD'}
+                tabIndex={0}
                 onClick={() => setPaymentMethod('COD')}
-                className={`p-4 rounded-2xl border-2 transition-all cursor-pointer space-y-2 ${
+                onKeyDown={(e) => {
+                  if (e.key === ' ' || e.key === 'Enter') {
+                    e.preventDefault();
+                    setPaymentMethod('COD');
+                  }
+                }}
+                className={`p-4 rounded-2xl border-2 transition-all cursor-pointer space-y-2 select-none min-h-[100px] focus:outline-none focus-visible:ring-2 focus-visible:ring-forest-600 focus-visible:ring-offset-2 ${
                   paymentMethod === 'COD'
-                    ? 'border-forest-600 bg-forest-50/40 shadow-sm'
-                    : 'border-stone-200 hover:border-stone-300'
+                    ? 'border-forest-600 bg-forest-50/40 shadow-xs'
+                    : 'border-stone-200 hover:border-stone-300 bg-white'
                 }`}
               >
                 <div className="flex items-center justify-between">
                   <Banknote className="w-5 h-5 text-forest-600" />
-                  {paymentMethod === 'COD' && <CheckCircle2 className="w-4 h-4 text-forest-600" />}
+                  {paymentMethod === 'COD' && <CheckCircle2 className="w-4 h-4 text-forest-600 shrink-0" />}
                 </div>
                 <h3 className="text-xs font-bold text-stone-900">Cash on Delivery</h3>
                 <p className="text-[11px] text-stone-500">Pay directly when fresh produce is delivered.</p>
               </div>
 
               <div
+                role="radio"
+                aria-checked={paymentMethod === 'BAKONG_QR'}
+                tabIndex={0}
                 onClick={() => setPaymentMethod('BAKONG_QR')}
-                className={`p-4 rounded-2xl border-2 transition-all cursor-pointer space-y-2 relative ${
+                onKeyDown={(e) => {
+                  if (e.key === ' ' || e.key === 'Enter') {
+                    e.preventDefault();
+                    setPaymentMethod('BAKONG_QR');
+                  }
+                }}
+                className={`p-4 rounded-2xl border-2 transition-all cursor-pointer space-y-2 relative select-none min-h-[100px] focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-600 focus-visible:ring-offset-2 ${
                   paymentMethod === 'BAKONG_QR'
-                    ? 'border-teal-600 bg-teal-50/50 shadow-sm ring-2 ring-teal-600/20'
-                    : 'border-stone-200 hover:border-stone-300'
+                    ? 'border-teal-600 bg-teal-50/50 shadow-xs ring-2 ring-teal-600/20'
+                    : 'border-stone-200 hover:border-stone-300 bg-white'
                 }`}
               >
                 <div className="flex items-center justify-between">
@@ -322,14 +349,15 @@ export const CheckoutPage: React.FC = () => {
                     <QrCode className="w-5 h-5 text-teal-700" />
                     <span className="text-[9px] font-extrabold bg-teal-700 text-white px-1.5 py-0.5 rounded uppercase">ABA PayWay</span>
                   </div>
-                  {paymentMethod === 'BAKONG_QR' && <CheckCircle2 className="w-4 h-4 text-teal-700" />}
+                  {paymentMethod === 'BAKONG_QR' && <CheckCircle2 className="w-4 h-4 text-teal-700 shrink-0" />}
                 </div>
                 <h3 className="text-xs font-bold text-stone-900">ABA PayWay / KHQR</h3>
-                <p className="text-[11px] text-stone-500">Instant real payment via ABA Mobile, ACLEDA, Bakong, or Wing.</p>
+                <p className="text-[11px] text-stone-500">Instant payment via ABA Mobile, ACLEDA, or Bakong.</p>
               </div>
 
               <div
-                className="p-4 rounded-2xl border-2 border-stone-200 bg-stone-50/50 opacity-60 cursor-not-allowed space-y-2 select-none"
+                aria-disabled="true"
+                className="p-4 rounded-2xl border-2 border-stone-200 bg-stone-50/50 opacity-60 cursor-not-allowed space-y-2 select-none min-h-[100px]"
               >
                 <div className="flex items-center justify-between">
                   <CreditCard className="w-5 h-5 text-stone-400" />

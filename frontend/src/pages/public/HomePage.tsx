@@ -104,16 +104,57 @@ export const HomePage: React.FC = () => {
                 Skip the supermarket. Get organic vegetables, exotic fruits, and fresh dairy delivered straight from independent Cambodian farmers to your door within 24 hours of harvest.
               </p>
 
-              <div className="pt-4 flex flex-col items-center lg:items-start gap-3">
-                <Link to="/products" className="w-full sm:w-auto">
-                  <Button variant="primary" size="lg" className="w-full sm:w-auto text-lg px-8 py-4 font-black shadow-lg shadow-forest-600/25 hover:shadow-forest-600/40 rounded-2xl transform hover:-translate-y-0.5 transition-all bg-forest-600 hover:bg-forest-700 text-white">
-                    Get Fresh Produce Now
-                    <ArrowRight className="ml-2 w-5 h-5" />
-                  </Button>
-                </Link>
-                <div className="flex items-center justify-center lg:justify-start gap-4 text-xs font-bold text-stone-600">
-                  <span className="flex items-center gap-1.5"><CheckCircle2 className="w-3.5 h-3.5 text-forest-600" /> Free Shipping Available</span>
-                  <span className="flex items-center gap-1.5"><ShieldCheck className="w-3.5 h-3.5 text-forest-600" /> 100% Fresh Guarantee</span>
+              {/* Airbnb-Inspired Discovery Search Bar */}
+              <div className="pt-2 space-y-3">
+                <form
+                  onSubmit={handleHeroSearch}
+                  className="bg-white/95 backdrop-blur-md p-2 sm:p-2.5 rounded-2xl sm:rounded-full border border-stone-200/90 shadow-soft-lg flex flex-col sm:flex-row items-stretch sm:items-center gap-2 max-w-xl mx-auto lg:mx-0"
+                >
+                  <div className="flex-1 flex items-center px-3.5 py-1.5 gap-2.5">
+                    <Search className="w-5 h-5 text-forest-600 shrink-0" />
+                    <input
+                      type="text"
+                      placeholder="What produce are you looking for? (e.g. mango, tomatoes, coffee)"
+                      value={searchInput}
+                      onChange={(e) => setSearchInput(e.target.value)}
+                      className="w-full bg-transparent text-sm text-stone-900 placeholder:text-stone-400 focus:outline-none font-medium"
+                    />
+                  </div>
+
+                  <div className="hidden sm:block w-px h-8 bg-stone-200" />
+
+                  <div className="flex items-center justify-between sm:justify-start gap-2 px-2 sm:px-1">
+                    <span className="text-[11px] font-bold text-stone-500 uppercase tracking-wider hidden md:inline px-1">
+                      PP & SR
+                    </span>
+                    <button
+                      type="submit"
+                      className="w-full sm:w-auto px-6 py-3 rounded-xl sm:rounded-full bg-forest-600 hover:bg-forest-700 text-white font-bold text-sm shadow-xs transition-all duration-150 active:scale-95 flex items-center justify-center gap-2 shrink-0"
+                    >
+                      <Search className="w-4 h-4 sm:hidden" />
+                      <span>Search Harvests</span>
+                    </button>
+                  </div>
+                </form>
+
+                {/* Quick Discovery Tags */}
+                <div className="flex flex-wrap items-center justify-center lg:justify-start gap-1.5 sm:gap-2">
+                  <span className="text-[11px] font-semibold text-stone-500 mr-1">Popular:</span>
+                  {quickChips.map((chip) => (
+                    <button
+                      key={chip.query}
+                      type="button"
+                      onClick={() => handleQuickSearch(chip.query)}
+                      className="text-xs bg-white/80 hover:bg-white text-stone-700 hover:text-forest-700 px-3 py-1 rounded-full border border-stone-200/80 shadow-2xs transition-all hover:scale-105 active:scale-95"
+                    >
+                      {chip.label}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="flex items-center justify-center lg:justify-start gap-4 text-xs font-bold text-stone-600 pt-2">
+                  <span className="flex items-center gap-1.5"><CheckCircle2 className="w-3.5 h-3.5 text-forest-600" /> Direct Farm Delivery</span>
+                  <span className="flex items-center gap-1.5"><ShieldCheck className="w-3.5 h-3.5 text-forest-600" /> 100% Freshness Guarantee</span>
                 </div>
               </div>
             </div>
@@ -133,28 +174,28 @@ export const HomePage: React.FC = () => {
         </div>
       </section>
 
-      {/* TRUST METRICS / STATISTICS SECTION */}
+      {/* TRUST METRICS / AUTHENTIC LAUNCH PROVEN STATISTICS */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-6 sm:-mt-10 relative z-20">
         <div className="bg-white rounded-3xl p-6 sm:p-8 border border-stone-200/90 shadow-soft-lg grid grid-cols-2 md:grid-cols-4 gap-6 sm:gap-8 divide-y sm:divide-y-0 sm:divide-x divide-stone-100">
           <div className="text-center pt-3 sm:pt-0">
-            <p className="text-3xl sm:text-4xl font-extrabold text-forest-700 font-display">120+</p>
-            <p className="text-xs font-bold text-stone-900 mt-1">Verified Local Farms</p>
-            <p className="text-[11px] text-stone-500">100% Origin Guaranteed</p>
-          </div>
-          <div className="text-center pt-3 sm:pt-0">
-            <p className="text-3xl sm:text-4xl font-extrabold text-forest-700 font-display">480+</p>
-            <p className="text-xs font-bold text-stone-900 mt-1">Direct Harvest Listings</p>
+            <p className="text-3xl sm:text-4xl font-extrabold text-forest-700 font-display">100%</p>
+            <p className="text-xs font-bold text-stone-900 mt-1">Farm-Direct Traceability</p>
             <p className="text-[11px] text-stone-500">Zero Middleman Markup</p>
           </div>
           <div className="text-center pt-3 sm:pt-0">
-            <p className="text-3xl sm:text-4xl font-extrabold text-forest-700 font-display">14</p>
-            <p className="text-xs font-bold text-stone-900 mt-1">Cambodian Provinces</p>
-            <p className="text-[11px] text-stone-500">Nationwide Cold-Chain</p>
+            <p className="text-3xl sm:text-4xl font-extrabold text-forest-700 font-display">&lt;24h</p>
+            <p className="text-xs font-bold text-stone-900 mt-1">Harvest to Doorstep</p>
+            <p className="text-[11px] text-stone-500">Picked Fresh On Demand</p>
           </div>
           <div className="text-center pt-3 sm:pt-0">
-            <p className="text-3xl sm:text-4xl font-extrabold text-forest-700 font-display">99.4%</p>
-            <p className="text-xs font-bold text-stone-900 mt-1">Delivery Success</p>
-            <p className="text-[11px] text-stone-500">Escrow Protected Payouts</p>
+            <p className="text-3xl sm:text-4xl font-extrabold text-forest-700 font-display">PP & SR</p>
+            <p className="text-xs font-bold text-stone-900 mt-1">Local Delivery Zones</p>
+            <p className="text-[11px] text-stone-500">Phnom Penh & Siem Reap</p>
+          </div>
+          <div className="text-center pt-3 sm:pt-0">
+            <p className="text-3xl sm:text-4xl font-extrabold text-forest-700 font-display">&gt;95%</p>
+            <p className="text-xs font-bold text-stone-900 mt-1">Direct Farmer Payout</p>
+            <p className="text-[11px] text-stone-500">Empowering Cambodian Growers</p>
           </div>
         </div>
       </section>

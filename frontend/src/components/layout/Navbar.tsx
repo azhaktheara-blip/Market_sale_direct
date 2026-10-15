@@ -64,46 +64,52 @@ export const Navbar: React.FC = () => {
             </div>
           </Link>
 
-          {/* Desktop Search Bar */}
+          {/* Desktop Search Bar (Airbnb-Style Tactile Pill) */}
           <form onSubmit={handleSearch} className="hidden md:flex flex-1 max-w-md mx-4">
-            <div className="relative w-full">
+            <div className="relative w-full flex items-center bg-stone-50/80 hover:bg-white border border-stone-200/90 hover:border-stone-300 focus-within:border-forest-600 focus-within:bg-white focus-within:ring-2 focus-within:ring-forest-100 rounded-full pl-4 pr-1.5 py-1.5 shadow-2xs hover:shadow-xs transition-all duration-200">
               <input
                 type="text"
-                placeholder={t('nav.search_placeholder')}
+                placeholder={t('nav.search_placeholder') || 'Search fresh produce, crops, farms...'}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-stone-100/80 hover:bg-stone-100 focus:bg-white border border-stone-200 focus:border-forest-600 rounded-full pl-10 pr-4 py-2 text-sm text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-forest-100 transition-all"
+                className="w-full bg-transparent text-xs sm:text-sm text-stone-900 placeholder:text-stone-400 focus:outline-none pr-2 font-medium"
               />
-              <Search className="w-4 h-4 text-stone-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+              <button
+                type="submit"
+                aria-label="Submit search"
+                className="w-8 h-8 rounded-full bg-forest-600 hover:bg-forest-700 text-white flex items-center justify-center shrink-0 shadow-xs transition-all active:scale-95"
+              >
+                <Search className="w-3.5 h-3.5" />
+              </button>
             </div>
           </form>
 
           {/* Navigation Links */}
-          <nav className="hidden lg:flex items-center gap-6 text-sm font-semibold text-stone-600">
-            <Link to="/products" className="hover:text-forest-700 transition-colors">
+          <nav className="hidden lg:flex items-center gap-5 xl:gap-6 text-[13px] font-semibold text-stone-600">
+            <Link to="/products" className="hover:text-forest-700 transition-colors py-1">
               {t('nav.fresh_produce')}
             </Link>
-            <Link to="/farmers" className="hover:text-forest-700 transition-colors">
+            <Link to="/farmers" className="hover:text-forest-700 transition-colors py-1">
               {t('nav.local_farmers')}
             </Link>
-            <Link to="/map" className="hover:text-forest-700 transition-colors flex items-center gap-1">
+            <Link to="/map" className="hover:text-forest-700 transition-colors py-1 flex items-center gap-1">
               <span>{t('nav.farm_map')}</span>
             </Link>
-            <Link to="/radar" className="hover:text-forest-700 transition-colors flex items-center gap-1">
+            <Link to="/radar" className="hover:text-forest-700 transition-colors py-1 flex items-center gap-1">
               <span>{t('nav.market_radar')}</span>
             </Link>
-            <Link to="/calendar" className="hover:text-forest-700 transition-colors flex items-center gap-1">
+            <Link to="/calendar" className="hover:text-forest-700 transition-colors py-1 flex items-center gap-1">
               <span>{t('nav.crop_calendar')}</span>
             </Link>
-            <Link to="/how-it-works" className="hover:text-forest-700 transition-colors">
+            <Link to="/how-it-works" className="hover:text-forest-700 transition-colors py-1">
               {t('nav.how_it_works')}
             </Link>
             <Link
               to="/farmer-ai"
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 transition-all shadow-xs"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold text-forest-800 bg-forest-50 hover:bg-forest-100 border border-forest-200/80 transition-all shadow-2xs"
             >
-              <Sparkles className="w-3.5 h-3.5 text-emerald-600 animate-pulse" />
-              <span>Farmer AI Suite</span>
+              <Sparkles className="w-3.5 h-3.5 text-forest-600 animate-pulse" />
+              <span>Farmer AI</span>
             </Link>
           </nav>
 
@@ -269,8 +275,11 @@ export const Navbar: React.FC = () => {
 
             {/* Mobile Menu Toggle */}
             <button
+              type="button"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="lg:hidden p-2 text-stone-600 hover:text-stone-900 rounded-xl hover:bg-stone-100"
+              aria-expanded={mobileMenuOpen}
+              aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
+              className="lg:hidden p-2 text-stone-700 hover:text-stone-900 rounded-xl hover:bg-stone-100 min-h-[44px] min-w-[44px] flex items-center justify-center transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-forest-600"
             >
               {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
             </button>
@@ -279,9 +288,9 @@ export const Navbar: React.FC = () => {
 
         {/* Mobile Navigation Drawer */}
         {mobileMenuOpen && (
-          <div className="lg:hidden py-4 border-t border-stone-200 space-y-4">
+          <div className="lg:hidden py-4 border-t border-stone-200/80 space-y-4 animate-in fade-in slide-in-from-top-2 duration-200">
             <div className="flex items-center justify-between px-2">
-              <span className="text-xs font-bold text-stone-500">Language / ភាសា</span>
+              <span className="text-xs font-bold text-stone-500 uppercase tracking-wider">Language / ភាសា</span>
               <LanguageSwitcher />
             </div>
 
@@ -289,58 +298,72 @@ export const Navbar: React.FC = () => {
               <div className="relative">
                 <input
                   type="text"
-                  placeholder={t('nav.search_placeholder')}
+                  placeholder={t('nav.search_placeholder') || 'Search produce, farms...'}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full bg-stone-100 border border-stone-200 rounded-xl pl-10 pr-4 py-2 text-sm"
+                  className="w-full min-h-[44px] bg-stone-100 hover:bg-white focus:bg-white border border-stone-200 focus:border-forest-600 rounded-xl pl-10 pr-4 py-2.5 text-sm text-stone-900 focus:outline-none focus:ring-2 focus:ring-forest-100 transition-all"
                 />
-                <Search className="w-4 h-4 text-stone-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                <Search className="w-4 h-4 text-stone-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
               </div>
             </form>
 
-            <div className="flex flex-col gap-2 font-medium text-sm text-stone-700">
+            <div className="flex flex-col gap-1 font-medium text-sm text-stone-700">
               <Link
                 to="/products"
                 onClick={() => setMobileMenuOpen(false)}
-                className="py-2 px-3 rounded-xl hover:bg-forest-50 hover:text-forest-700"
+                className="min-h-[44px] flex items-center py-2.5 px-3.5 rounded-xl hover:bg-forest-50 hover:text-forest-800 transition-colors"
               >
                 {t('nav.fresh_produce')}
               </Link>
               <Link
                 to="/farmers"
                 onClick={() => setMobileMenuOpen(false)}
-                className="py-2 px-3 rounded-xl hover:bg-forest-50 hover:text-forest-700"
+                className="min-h-[44px] flex items-center py-2.5 px-3.5 rounded-xl hover:bg-forest-50 hover:text-forest-800 transition-colors"
               >
                 {t('nav.local_farmers')}
               </Link>
               <Link
                 to="/radar"
                 onClick={() => setMobileMenuOpen(false)}
-                className="py-2 px-3 rounded-xl hover:bg-forest-50 hover:text-forest-700"
+                className="min-h-[44px] flex items-center py-2.5 px-3.5 rounded-xl hover:bg-forest-50 hover:text-forest-800 transition-colors"
               >
                 {t('nav.market_radar')}
               </Link>
               <Link
                 to="/map"
                 onClick={() => setMobileMenuOpen(false)}
-                className="py-2 px-3 rounded-xl hover:bg-forest-50 hover:text-forest-700"
+                className="min-h-[44px] flex items-center py-2.5 px-3.5 rounded-xl hover:bg-forest-50 hover:text-forest-800 transition-colors"
               >
                 {t('nav.farm_map')}
               </Link>
               <Link
+                to="/calendar"
+                onClick={() => setMobileMenuOpen(false)}
+                className="min-h-[44px] flex items-center py-2.5 px-3.5 rounded-xl hover:bg-forest-50 hover:text-forest-800 transition-colors"
+              >
+                {t('nav.crop_calendar')}
+              </Link>
+              <Link
                 to="/how-it-works"
                 onClick={() => setMobileMenuOpen(false)}
-                className="py-2 px-3 rounded-xl hover:bg-forest-50 hover:text-forest-700"
+                className="min-h-[44px] flex items-center py-2.5 px-3.5 rounded-xl hover:bg-forest-50 hover:text-forest-800 transition-colors"
               >
                 {t('nav.how_it_works')}
               </Link>
               <Link
+                to="/about"
+                onClick={() => setMobileMenuOpen(false)}
+                className="min-h-[44px] flex items-center py-2.5 px-3.5 rounded-xl hover:bg-forest-50 hover:text-forest-800 transition-colors"
+              >
+                About Our Story & Founder
+              </Link>
+              <Link
                 to="/farmer-ai"
                 onClick={() => setMobileMenuOpen(false)}
-                className="py-2.5 px-3 rounded-xl bg-emerald-50 text-emerald-800 font-bold flex items-center gap-2 border border-emerald-200"
+                className="min-h-[44px] py-2.5 px-3.5 rounded-xl bg-forest-50 text-forest-800 font-bold flex items-center gap-2 border border-forest-200/80 transition-colors mt-1"
               >
-                <Sparkles className="w-4 h-4 text-emerald-600" />
-                <span>Farmer AI Suite (Voice, Vision & Predictions)</span>
+                <Sparkles className="w-4 h-4 text-forest-600" />
+                <span>Farmer AI Suite</span>
               </Link>
             </div>
           </div>

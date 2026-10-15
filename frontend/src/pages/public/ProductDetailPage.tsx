@@ -170,7 +170,7 @@ export const ProductDetailPage: React.FC = () => {
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 space-y-12">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 space-y-12 pb-28 lg:pb-12">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       {/* Breadcrumb */}
       <nav className="flex items-center gap-2 text-xs text-stone-400">
@@ -490,6 +490,62 @@ export const ProductDetailPage: React.FC = () => {
         productId={product.id}
         productName={product.name}
       />
+
+      {/* Mobile Sticky Booking Bar (Airbnb-Style Quick Checkout) */}
+      <aside
+        aria-label="Mobile quick purchase"
+        className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-stone-200/90 shadow-xl px-4 py-3 flex items-center justify-between safe-bottom"
+      >
+        <div className="flex flex-col">
+          <div className="flex items-baseline gap-1">
+            <span className="text-lg font-extrabold text-stone-900 font-display">
+              ${unitPrice.toFixed(2)}
+            </span>
+            <span className="text-xs text-stone-500 font-medium">/ {product.unit}</span>
+          </div>
+          <span className="text-[10px] text-stone-400 font-medium">
+            {isOut ? 'Sold Out' : `Min: ${product.minimum_order_qty} ${product.unit}`}
+          </span>
+        </div>
+
+        <div className="flex items-center gap-2">
+          {!isOut && (
+            <div className="flex items-center border border-stone-200 rounded-xl bg-stone-50 p-0.5">
+              <button
+                type="button"
+                onClick={handleDecrement}
+                aria-label="Decrease quantity"
+                className="w-8 h-8 flex items-center justify-center font-bold text-stone-600 hover:text-stone-900 active:scale-95 transition-transform"
+              >
+                -
+              </button>
+              <span className="w-7 text-center text-xs font-bold text-stone-900">
+                {quantity}
+              </span>
+              <button
+                type="button"
+                onClick={handleIncrement}
+                aria-label="Increase quantity"
+                className="w-8 h-8 flex items-center justify-center font-bold text-stone-600 hover:text-stone-900 active:scale-95 transition-transform"
+              >
+                +
+              </button>
+            </div>
+          )}
+
+          <Button
+            variant="primary"
+            size="md"
+            onClick={handleAddToCart}
+            isLoading={isAdding}
+            disabled={isOut || isAdding}
+            className="min-h-[44px] px-3.5 font-bold shadow-xs text-xs"
+            leftIcon={isAdded ? <Check className="w-4 h-4 stroke-[3]" /> : <ShoppingCart className="w-4 h-4" />}
+          >
+            {isOut ? 'Sold Out' : isAdded ? 'Added ✓' : `Add ($${calculatedTotal})`}
+          </Button>
+        </div>
+      </aside>
     </div>
   );
 };

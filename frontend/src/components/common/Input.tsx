@@ -30,14 +30,16 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
           <input
             ref={ref}
             id={inputId}
+            aria-invalid={!!error}
+            aria-describedby={error ? `${inputId}-error` : helperText ? `${inputId}-helper` : undefined}
             className={twMerge(
               clsx(
-                'w-full bg-white border rounded-xl px-3.5 py-2.5 text-stone-900 placeholder:text-stone-400 text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1',
+                'w-full min-h-[44px] bg-white border rounded-xl px-3.5 py-2.5 text-stone-900 placeholder:text-stone-400 text-sm transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-offset-1',
                 leftIcon ? 'pl-10' : 'pl-3.5',
                 rightElement ? 'pr-10' : 'pr-3.5',
                 error
                   ? 'border-rose-300 focus:border-rose-500 focus:ring-rose-200'
-                  : 'border-stone-300 focus:border-forest-600 focus:ring-forest-100',
+                  : 'border-stone-300 hover:border-stone-400 focus:border-forest-600 focus:ring-forest-100',
                 className
               )
             )}
@@ -49,8 +51,16 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
             </div>
           )}
         </div>
-        {error && <p className="mt-1.5 text-xs text-rose-600 font-medium">{error}</p>}
-        {helperText && !error && <p className="mt-1 text-xs text-stone-500">{helperText}</p>}
+        {error && (
+          <p id={`${inputId}-error`} role="alert" className="mt-1.5 text-xs text-rose-600 font-medium">
+            {error}
+          </p>
+        )}
+        {helperText && !error && (
+          <p id={`${inputId}-helper`} className="mt-1 text-xs text-stone-500">
+            {helperText}
+          </p>
+        )}
       </div>
     );
   }
